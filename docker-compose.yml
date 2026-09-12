@@ -1,0 +1,129 @@
+# ==============================================================================
+# FreeSWITCH docker-compose
+# ==============================================================================
+#
+# Usage
+# -----
+#   1. Extract the default config into ./etc (required before first run):
+#        docker run --rm yukiosaka/freeswitch:latest \
+#          tar -C /usr/local/freeswitch -cf - etc/freeswitch \
+#          | tar -xf - --strip-components=1 -C ./etc
+#
+#   2. mkdir -p ./secrets && chmod 700 ./secrets
+#
+#   3. docker compose up -d
+#      On first boot the container generates a self-signed TLS cert and
+#      writes it to ./secrets/tls, then starts FreeSWITCH normally. On
+#      subsequent restarts, if ./secrets/tls already exists, it is
+#      reused as-is instead of being regenerated.
+#
+#   4. Check what was generated:
+#        ls ./secrets/tls
+#
+# Customization
+# -------------
+#   Security hardening still required before exposing this to any
+#   untrusted network — none of the following are automated by this
+#   compose:
+#
+#   1. ESL default password
+#      File: ./etc/freeswitch/autoload_configs/event_socket.conf.xml
+#      Fix:  replace the "ClueCon" password with a strong random value.
+#
+#   2. ESL ACL
+#      File: ./etc/freeswitch/autoload_configs/event_socket.conf.xml
+#      Fix:  uncomment/configure the <ACL> section (e.g. "loopback.auto")
+#            so only trusted hosts/containers can connect, even on the
+#            internal network.
+#
+#   3. SIP directory default passwords
+#      File: ./etc/freeswitch/vars.xml
+#      Fix:  change the default_password variable from its shipped
+#            value to a strong random value (used by extensions under
+#            directory/default/*.xml).
+#
+#   4. SIP directory per-extension overrides
+#      File: ./etc/freeswitch/directory/default/*.xml (e.g. 1000.xml)
+#      Fix:  remove or set an individual strong password per extension
+#            instead of relying solely on the shared default_password.
+#
+#   5. RTP port range
+#      File: ./etc/freeswitch/autoload_configs/switch.conf.xml
+#      Fix:  uncomment and set rtp-start-port / rtp-end-port explicitly
+#            to match the "ports:" range below (16384-18383). Left
+#            commented out, FreeSWITCH defaults to the full 16384-32768
+#            span, wider than what is actually published.
+#
+#   6. SIP TLS profile
+#      File: ./etc/freeswitch/sip_profiles/internal.xml (and/or external.xml)
+#      Fix:  add a TLS-enabled profile pointing at the certs generated
+#            under ./secrets/tls, then restart the profile
+#            (`sofia profile <name> restart`) — SIP is plaintext until
+#            this is done.
+#
+#   Non-security customization:
+#   - RTP capacity: match ports: above to your expected concurrent call
+#     count (~2 RTP ports per call) when setting item 5.
+#   - Self-signed cert: on first start this compose generates one via
+#     gentls_cert into ./secrets/tls and reuses it on later restarts —
+#     see item 6 to actually wire it into a SIP profile.
+#   - Anything else not covered above (dialplans, additional modules,
+#     etc.) — edit XML under ./etc/freeswitch/ directly and run
+#     `fs_cli reloadxml` (or restart the container).
+
+version: "3.8"
+
+services:
+  freeswitch:
+    image: yukiosaka/freeswitch:latest
+    container_name: freeswitch
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
+    ports:
+      - "5060:5060/udp"
+      - "5060:5060/tcp"
+      - "5080:5080/udp"
+      - "5080:5080/tcp"
+      - "16384-18383:16384-18383/udp"
+      # ESL — intentionally commented out and NOT hardened by this
+      # compose (default password "ClueCon", open ACL unchanged). Only
+      # uncomment after changing the password/ACL yourself in
+      # event_socket.conf.xml (see Customization item 1-2), and prefer
+      # reaching it from other containers on the "internal" network
+      # instead of publishing to the host.
+      # - "8021:8021/tcp"
+    volumes:
+      - ./etc:/usr/local/freeswitch/etc
+      - ./secrets:/secrets
+      - fs-db:/usr/local/freeswitch/var/lib/freeswitch/db
+      - fs-recordings:/usr/local/freeswitch/var/lib/freeswitch/recordings
+      - fs-storage:/usr/local/freeswitch/var/lib/freeswitch/storage
+      - fs-log:/usr/local/freeswitch/var/log/freeswitch
+    networks:
+      - internal
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        ETC=/usr/local/freeswitch/etc/freeswitch
+        if [ ! -d /secrets/tls ]; then
+          /usr/local/freeswitch/bin/gentls_cert sip
+          cp -r "$$ETC/tls" /secrets/tls
+        else
+          rm -rf "$$ETC/tls"
+          cp -r /secrets/tls "$$ETC/tls"
+        fi
+        exec /usr/bin/tini -- /usr/local/bin/docker-entrypoint.sh freeswitch -nonat -nf -c
+
+networks:
+  internal:
+    driver: bridge
+
+volumes:
+  fs-db:
+  fs-recordings:
+  fs-storage:
+  fs-log:
