@@ -17,6 +17,7 @@
            mod_g729
            mod_g723_1
     -->
+    <load module="mod_av"/>
     <load module="mod_avmd"/>
     <load module="mod_bert"/>
     <load module="mod_blacklist"/>

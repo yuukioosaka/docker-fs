@@ -24,6 +24,8 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -yq --no-install-re
         libnode-dev librabbitmq-dev \
         libhiredis-dev libmariadb-dev libldap2-dev \
         libopusfile-dev libopusenc-dev \
+        libavformat-dev libavcodec-dev libswscale-dev \
+        libavutil-dev libswresample-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /usr/src/libs
@@ -114,6 +116,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -yq --no-install-re
         libhiredis1.1.0 libmariadb3 libldap2 \
         libopusfile0 libopusenc0 \
         librabbitmq4 \
+        libavformat61 libavcodec61 libswscale8 libavutil59 libswresample5 \
         ca-certificates tini gettext-base postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
