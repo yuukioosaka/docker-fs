@@ -92,7 +92,6 @@ jobs:
 
   build:
     needs: check
-    if: needs.check.outputs.build == 'true'
     runs-on: ubuntu-latest
     environment: prod
     steps:
