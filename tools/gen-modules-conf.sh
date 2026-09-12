@@ -37,9 +37,22 @@ mkdir -p "$(dirname "$OUT")"
 #   mod_odbc_cdr    opens odbc_cdr.conf, which does not exist by default
 #   mod_xml_curl    has no <binding> URL configured by default
 #   mod_xml_ldap    opens xml_ldap.conf, which does not exist by default
+#   mod_codec2      opens codec2.conf, which does not exist by default
 #
-# All six are still built. Add a <load module="..."/> line to your own
-# modules.conf.xml once you have supplied the configuration they need.
+# The codecs below are a deliberate opt-in for licensing reasons rather than a
+# configuration problem: they all load cleanly, but AMR/AMRWB and G.729/G.723.1
+# can carry patent or licensing obligations depending on jurisdiction and use.
+# Keeping them out of the default startup list means an unmodified container
+# never offers them in a codec negotiation.
+#
+#   mod_amr         patent-encumbered in most jurisdictions
+#   mod_amrwb       patent-encumbered in most jurisdictions
+#   mod_g729        patents expired (2017), but kept opt-in for consistency
+#   mod_g723_1      kept opt-in for consistency with the codecs above
+#
+# All twelve are still built, so enabling one needs no rebuild: add a
+# <load module="..."/> line to your own modules.conf.xml (and, for the
+# modules that need it, supply the configuration they read).
 NOT_AUTOLOAD_MODULES=(
   mod_amqp
   mod_lcr
@@ -48,6 +61,11 @@ NOT_AUTOLOAD_MODULES=(
   mod_odbc_cdr
   mod_xml_curl
   mod_xml_ldap
+  mod_codec2
+  mod_amr
+  mod_amrwb
+  mod_g729
+  mod_g723_1
 )
 
 is_not_autoloaded() {

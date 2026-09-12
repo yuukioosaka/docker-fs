@@ -21,7 +21,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -yq --no-install-re
         liblua5.4-dev libopus-dev libpq-dev \
         libsndfile1-dev libflac-dev libvorbis-dev default-libmysqlclient-dev \
         libshout3-dev libmpg123-dev libmp3lame-dev \
-        libnode-dev librabbitmq-dev libcodec2-dev \
+        libnode-dev librabbitmq-dev \
         libhiredis-dev libmariadb-dev libldap2-dev \
         libopusfile-dev libopusenc-dev \
     && rm -rf /var/lib/apt/lists/*
@@ -69,7 +69,7 @@ WORKDIR /usr/src/freeswitch
 
 # Replace the upstream module list wholesale: our modules.conf.in is the source
 # of truth for which modules get built, and it only enables modules whose
-# dependencies exist in Debian bookworm.
+# dependencies exist in Debian trixie.
 COPY modules.conf.in /usr/src/freeswitch/build/modules.conf.in
 
 # The shipped autoload list names every module upstream knows about, so the
@@ -77,6 +77,12 @@ COPY modules.conf.in /usr/src/freeswitch/build/modules.conf.in
 # generated from the same list that drives the build.
 COPY conf-templates/autoload_configs/modules.conf.xml \
      /usr/src/freeswitch/conf/vanilla/autoload_configs/modules.conf.xml
+
+# Upstream preloads mod_pgsql here as well as in modules.conf.xml, which makes
+# the core warn "Module mod_pgsql Already Loaded!" on boot. Emptying this file
+# leaves modules.conf.xml as the single place that decides what is loaded.
+COPY conf-templates/autoload_configs/pre_load_modules.conf.xml \
+     /usr/src/freeswitch/conf/vanilla/autoload_configs/pre_load_modules.conf.xml
 
 RUN ./bootstrap.sh -j \
     && ./configure --prefix=/usr/local/freeswitch --enable-core-odbc-support \
@@ -94,7 +100,7 @@ LABEL org.opencontainers.image.title="FreeSWITCH" \
       org.opencontainers.image.source="https://github.com/signalwire/freeswitch"
 
 # Package names differ from bookworm: several libraries were renamed for the
-# 64-bit time_t transition (t64 suffix), and flac, libhiredis, libcodec2,
+# 64-bit time_t transition (t64 suffix), and flac, libhiredis,
 # libcurl, and openldap all bumped their soname. libpython3.13 is not a
 # dependency of python3, but mod_python3.so links against libpython3.13.so.1.0
 # at load time.
@@ -107,7 +113,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -yq --no-install-re
         libvorbisfile3 libtpl0 \
         libhiredis1.1.0 libmariadb3 libldap2 \
         libopusfile0 libopusenc0 \
-        libcodec2-1.2 librabbitmq4 \
+        librabbitmq4 \
         ca-certificates tini gettext-base postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 

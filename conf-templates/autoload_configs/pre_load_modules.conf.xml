@@ -1,0 +1,10 @@
+<configuration name="pre_load_modules.conf" description="Modules">
+  <modules>
+    <!-- mod_pgsql is intentionally not preloaded here. It is already listed in
+         modules.conf.xml, which is generated from ./modules.conf.in, and
+         loading it in both files makes the core log
+         "[WARNING] Module mod_pgsql Already Loaded!" on every startup.
+         Keep this file empty unless you need a module available before the
+         rest of the autoload list runs. -->
+  </modules>
+</configuration>

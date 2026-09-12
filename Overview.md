@@ -7,7 +7,7 @@ A containerized build of [FreeSWITCH](https://github.com/signalwire/freeswitch),
 - FreeSWITCH core built from source; the dependencies libks, sofia-sip, spandsp, and signalwire-c are also compiled from source
 - English sound files and Music-on-Hold (`sounds-install`, `moh-install`)
 - Multi-stage build — the final image ships only runtime libraries, not the build toolchain
-- Module set defined by a custom [`modules.conf.in`](https://github.com/yuukioosaka/docker-fs/blob/main/modules.conf.in), copied over the upstream file during the build; the startup module list is generated from it by `tools/gen-modules-conf.sh`
+- Module set defined by a custom [`modules.conf.in`](https://github.com/yuukioosaka/docker-fs/blob/main/modules.conf.in), copied over the upstream file during the build
 - FreeSWITCH version pinned by [`FS_VERSION`](https://github.com/yuukioosaka/docker-fs/blob/main/FS_VERSION) and resolved to the latest upstream release tag by CI
 
 ## Enabled Modules
@@ -18,7 +18,7 @@ A containerized build of [FreeSWITCH](https://github.com/signalwire/freeswitch),
 |---|---|
 | Applications | avmd, bert, blacklist, callcenter, cidlookup, commands, conference, curl, db, directory, distributor, dptools, easyroute, enum, esl, expr, fifo, fsk, hash, hiredis, httapi, http_cache, lcr, nibblebill, prefix, redis, signalwire, sms, spandsp, translate, valet_parking, video_filter, vmd, voicemail, voicemail_ivr |
 | ASR/TTS | tts_commandline |
-| Codecs | b64, codec2, g723_1, g729, opus |
+| Codecs | amr, amrwb, b64, codec2, g723_1, g729, opus |
 | Databases | mariadb, pgsql |
 | Dialplans | dialplan_asterisk, dialplan_directory, dialplan_xml |
 | Directories | ldap |
@@ -30,6 +30,8 @@ A containerized build of [FreeSWITCH](https://github.com/signalwire/freeswitch),
 | Say | en |
 | Timers | timerfd |
 | XML Interfaces | xml_cdr, xml_curl, xml_ldap, xml_rpc, xml_scgi |
+
+**Not loaded by default**: `mod_amr`, `mod_amrwb`, `mod_g729`, `mod_g723_1`, and `mod_codec2` are compiled into the image but left out of the startup list. The first four are an opt-in for licensing reasons — AMR/AMRWB carry patent obligations in most jurisdictions, and G.729/G.723.1 are grouped with them for consistency (G.729's patents expired in 2017). `mod_codec2` only fails because upstream ships no `codec2.conf`. Load any of them by adding a `<load module="..."/>` line to your own `modules.conf.xml`; no rebuild is needed. `mod_av` is not built at all (FFmpeg-based; GPL/LGPL relicensing risk plus potential H.264/AAC patent exposure). See Disclaimer.
 
 ## Directory Layout (prefix: `/usr/local/freeswitch`)
 
@@ -79,12 +81,10 @@ docker run --rm <image> tar -C /usr/local/freeswitch -cf - etc/freeswitch | tar 
 ## Customization
 
 - **Configuration**: mount your own config over `/usr/local/freeswitch/etc/freeswitch`, or extract the default set out of the image first as a starting point.
-- **Environment substitution**: `gettext-base` (`envsubst`) is installed, but `docker-entrypoint.sh` does **not** use it — the entrypoint is a plain `exec "$@"` and no config templating happens. Render your config yourself before mounting it.
 - **Persistent state**: mount `var/lib/freeswitch` to avoid losing registrations, CDRs, and recorded calls on container recreation.
 - **PostgreSQL**: `postgresql-client` and ODBC support (`--enable-core-odbc-support`, `unixodbc`) are built in, so the core DB can point at an external Postgres/MariaDB instead of the bundled sqlite.
 - **RTP range**: set `rtp-start-port`/`rtp-end-port` in `autoload_configs/switch.conf.xml` and publish the same range.
-- **CMD override**: default is `freeswitch -nonat -nf -c`; override `CMD` to change startup flags (e.g. remove `-nonat` if not behind NAT).
-- **`FREESWITCH_OPTS`**: if you set this variable, FreeSWITCH appends it to its argument list. Note the value is split on spaces, so arguments containing spaces cannot be passed this way.
+- **Additional/replacement codecs**: the codecs left out of the startup list (`mod_amr`, `mod_amrwb`, `mod_g729`, `mod_g723_1`, `mod_codec2`) are already compiled in — just add a `<load>` line. For something not built at all (e.g. `mod_av`), rebuild with a modified `modules.conf.in` — see Disclaimer for the licensing considerations that come with them.
 
 ## Constraints
 
@@ -103,7 +103,7 @@ The maintainer(s) of this image are not affiliated with SignalWire or the FreeSW
 
 - reviewing and hardening default credentials, ACLs, and exposed ports before any network-facing deployment
 - compliance with applicable telecom regulations in your jurisdiction
-- verifying license compliance for all bundled and third-party dependencies (FreeSWITCH is MPL 1.1; some optional codecs/libraries, e.g. G.729, may carry separate licensing/patent obligations depending on your usage and region)
+- verifying license compliance for all bundled and third-party dependencies. FreeSWITCH itself is MPL 1.1. `mod_amr`, `mod_amrwb`, `mod_g729`, and `mod_g723_1` are compiled in but not loaded by default: AMR/AMRWB carry patent obligations in most jurisdictions, so enabling them is your decision — see Disclaimer
 - any data loss, service interruption, toll fraud, or other damages arising from use of this image
 
 No support or SLA is implied. Issues can be filed on the repository, but response and fixes are not guaranteed.

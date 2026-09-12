@@ -11,6 +11,11 @@
            mod_odbc_cdr
            mod_xml_curl
            mod_xml_ldap
+           mod_codec2
+           mod_amr
+           mod_amrwb
+           mod_g729
+           mod_g723_1
     -->
     <load module="mod_avmd"/>
     <load module="mod_bert"/>
@@ -36,21 +41,16 @@
     <load module="mod_http_cache"/>
     <load module="mod_nibblebill"/>
     <load module="mod_prefix"/>
-    <load module="mod_redis"/>
     <load module="mod_signalwire"/>
     <load module="mod_sms"/>
     <load module="mod_spandsp"/>
     <load module="mod_translate"/>
     <load module="mod_valet_parking"/>
     <load module="mod_video_filter"/>
-    <load module="mod_vmd"/>
     <load module="mod_voicemail"/>
     <load module="mod_voicemail_ivr"/>
     <load module="mod_tts_commandline"/>
     <load module="mod_b64"/>
-    <load module="mod_codec2"/>
-    <load module="mod_g723_1"/>
-    <load module="mod_g729"/>
     <load module="mod_opus"/>
     <load module="mod_mariadb"/>
     <load module="mod_pgsql"/>
