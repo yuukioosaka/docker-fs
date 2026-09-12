@@ -24,10 +24,30 @@ OUT=${2:-conf-templates/autoload_configs/modules.conf.xml}
 mkdir -p "$(dirname "$OUT")"
 
 # Compiled, but not loaded at startup unless the user opts in.
+#
 #   mod_amqp: connects to an AMQP broker on load and retries forever if none is
-#   reachable, filling the log with [CRIT]/[WARNING] on every default install.
+#             reachable, filling the log with [CRIT]/[WARNING] on every boot.
+#
+# The rest fail their load routine outright because upstream ships no config
+# for them, so every default start logs an "Error Loading module" [CRIT]:
+#
+#   mod_lcr         needs an ODBC DSN and an lcr.conf.xml
+#   mod_fail2ban    opens fail2ban.conf, which does not exist by default
+#   mod_json_cdr    opens json_cdr.conf, which does not exist by default
+#   mod_odbc_cdr    opens odbc_cdr.conf, which does not exist by default
+#   mod_xml_curl    has no <binding> URL configured by default
+#   mod_xml_ldap    opens xml_ldap.conf, which does not exist by default
+#
+# All six are still built. Add a <load module="..."/> line to your own
+# modules.conf.xml once you have supplied the configuration they need.
 NOT_AUTOLOAD_MODULES=(
   mod_amqp
+  mod_lcr
+  mod_fail2ban
+  mod_json_cdr
+  mod_odbc_cdr
+  mod_xml_curl
+  mod_xml_ldap
 )
 
 is_not_autoloaded() {

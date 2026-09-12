@@ -14,8 +14,6 @@ A containerized build of [FreeSWITCH](https://github.com/signalwire/freeswitch),
 
 80 modules are compiled into the image. `modules.conf.in` is the source of truth; the table below mirrors it.
 
-The image is ~563MB, down from ~1.5GB before slimming. Two things keep it there: `--no-install-recommends` on every apt install, and an apt package list that names only the libraries an enabled module actually links against.
-
 | Category | Modules |
 |---|---|
 | Applications | avmd, bert, blacklist, callcenter, cidlookup, commands, conference, curl, db, directory, distributor, dptools, easyroute, enum, esl, expr, fifo, fsk, hash, hiredis, httapi, http_cache, lcr, nibblebill, prefix, redis, signalwire, sms, spandsp, translate, valet_parking, video_filter, vmd, voicemail, voicemail_ivr |
@@ -32,8 +30,6 @@ The image is ~563MB, down from ~1.5GB before slimming. Two things keep it there:
 | Say | en |
 | Timers | timerfd |
 | XML Interfaces | xml_cdr, xml_curl, xml_ldap, xml_rpc, xml_scgi |
-
-Upstream's shipped autoload list names every module it knows about, including ones this build does not compile, which makes FreeSWITCH log a `[CRIT]` for each at every startup. The generated list contains only what is actually present.
 
 ## Directory Layout (prefix: `/usr/local/freeswitch`)
 
@@ -54,7 +50,7 @@ The prefix uses the FHS layout, so paths differ from the source tree's defaults:
 
 ## Ports
 
-No ports are declared with `EXPOSE`; publish the ones you need with `-p`. Nothing listens until the corresponding module and profile are configured.
+Publish the ports you need with `-p`. Nothing listens until the corresponding module and profile are configured.
 
 - `5060/udp`, `5060/tcp` — SIP signaling (internal profile)
 - `5080/udp`, `5080/tcp` — SIP signaling (external profile)
@@ -92,7 +88,7 @@ docker run --rm <image> tar -C /usr/local/freeswitch -cf - etc/freeswitch | tar 
 
 ## Constraints
 
-- **Module list is fixed at build time.** Modules not in `modules.conf.in` cannot be loaded at runtime; adding one requires rebuilding the image. `mod_amqp` is the exception: it is compiled in but not autoloaded, so it can be turned on purely by config.
+- **Module list is fixed at build time.** Modules not in `modules.conf.in` cannot be loaded at runtime.
 - **Single architecture.** The final stage copies `libks2.so*`, `libsofia-sip-ua.so*`, `libsignalwire_client2.so*`, and `libspandsp.so*` from hardcoded `x86_64`/`lib` paths, so this image (as-is) only supports `amd64`.
 - **Default credentials are live.** The shipped `event_socket.conf.xml` listens on `::` port `8021` with the well-known password `ClueCon`, and the `loopback.auto` ACL is commented out. That means anyone who can reach the port can control the switch. Override these via your own config mount before exposing the container to any untrusted network.
 - **No TLS certificates.** `make install` does not create a `certs/` or `tls/` directory. Run `gentls_cert` (in `bin/`) or supply your own if you enable TLS SIP profiles.
