@@ -8,7 +8,6 @@ A containerized build of [FreeSWITCH](https://github.com/signalwire/freeswitch),
 - English sound files and Music-on-Hold (`sounds-install`, `moh-install`)
 - Multi-stage build — the final image ships only runtime libraries, not the build toolchain
 - Module set defined by a custom [`modules.conf.in`](https://github.com/yuukioosaka/docker-fs/blob/main/modules.conf.in), copied over the upstream file during the build
-- FreeSWITCH version pinned by [`FS_VERSION`](https://github.com/yuukioosaka/docker-fs/blob/main/FS_VERSION) and resolved to the latest upstream release tag by CI
 
 ## Enabled Modules
 
@@ -87,7 +86,7 @@ Without those options `docker logs` grows without limit. With them, no log file 
 |---|---|---|
 | `var/log/freeswitch/{cdr-csv,format_cdr,xml_cdr}/` | One file per call | Rotate, or ship CDRs to Postgres/MariaDB via `mod_pgsql`/`mod_mariadb` and stop writing files. |
 | `var/lib/freeswitch/recordings/` | One file per call when recording is enabled | Rotate/archive. Never delete without checking retention obligations. |
-| `var/lib/freeswitch/storage/` | `mod_http_cache` caches fetched files and never expires them | Prune periodically. |
+| `var/lib/freeswitch/storage/` | `mod_http_cache` caches fetched files and never expires them; voicemail recordings (`vm.conf.xml` default `storage-dir`) are also written under `storage/voicemail/default/<domain>/<user>/` in this same tree | Prune HTTP cache periodically, but do not blindly wipe this directory — voicemail `.wav` files live here too and must be preserved/backed up separately. |
 | `var/lib/freeswitch/db/` | Registrations, queues, CDRs, voicemail | **Back this up, but do not prune it.** Deleting `core.db` or `sofia_reg_*.db` drops every registration; `callcenter.db`, `fifo.db`, and `voicemail_default.db` hold live state. |
 
 `var/log/freeswitch/freeswitch.xml.fsxml` is also written on every config reload. It is fixed in size and regenerated, so it needs no attention.
