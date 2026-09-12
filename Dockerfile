@@ -15,10 +15,17 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -yq install \
         libssl-dev zlib1g-dev libdb-dev unixodbc-dev libncurses-dev \
         libexpat1-dev libgdbm-dev bison erlang-dev libtpl-dev libtiff-dev \
         uuid-dev libpcre2-dev libedit-dev libsqlite3-dev libcurl4-openssl-dev \
-        libogg-dev libspeex-dev libspeexdsp-dev libldns-dev python3-dev \
+        libogg-dev libspeex-dev libspeexdsp-dev libldns-dev \
+        python3-dev python3-distutils python3-setuptools \
         libavformat-dev libswscale-dev liblua5.4-dev libopus-dev libpq-dev \
         libsndfile1-dev libflac-dev libvorbis-dev default-libmysqlclient-dev \
         libshout3-dev libmpg123-dev libmp3lame-dev libyuv-dev \
+        libnode-dev librabbitmq-dev libasound2-dev libcodec2-dev \
+        libopencv-dev libhiredis-dev libmemcached-dev libmongoc-dev \
+        libmariadb-dev libldap2-dev libsmpp34-dev libmagickcore-dev \
+        libvlc-dev libopusfile-dev libopusenc-dev libsnmp-dev libperl-dev \
+        default-jdk libsphinxbase-dev libpocketsphinx-dev \
+        libvo-amrwbenc-dev libopencore-amrwb-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /usr/src/libs
@@ -62,14 +69,10 @@ RUN set -eux; \
 
 WORKDIR /usr/src/freeswitch
 
-RUN sed -i \
-        -e 's|^#\(databases/mod_pgsql\)|\1|' \
-        -e 's|^#\(timers/mod_timerfd\)|\1|' \
-        build/modules.conf.in \
-    && grep -q '^databases/mod_pgsql' build/modules.conf.in \
-    && grep -q '^timers/mod_timerfd' build/modules.conf.in \
-    && grep -q '^applications/mod_spandsp' build/modules.conf.in \
-    && grep -q '^applications/mod_dptools' build/modules.conf.in
+# Replace the upstream module list wholesale: our modules.conf.in is the source
+# of truth for which modules get built, and it only enables modules whose
+# dependencies exist in Debian bookworm.
+COPY modules.conf.in /usr/src/freeswitch/build/modules.conf.in
 
 RUN ./bootstrap.sh -j \
     && ./configure --prefix=/usr/local/freeswitch --enable-core-odbc-support \
@@ -92,7 +95,13 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -yq install \
         libogg0 libspeex1 libspeexdsp1 libldns3 python3 libavformat59 \
         libswscale6 liblua5.4-0 libopus0 libpq5 libsndfile1 libflac12 \
         libvorbis0a libshout3 libmpg123-0 libmp3lame0 libyuv0 \
-        libvorbisfile3 libtpl0 \
+        libvorbisfile3 libtpl0 libnode108 \
+        libopencv-core406 libopencv-imgproc406 libopencv-video406 \
+        libopencv-imgcodecs406 libhiredis0.14 libmemcached11 libmongoc-1.0-0 \
+        libmariadb3 libldap-2.5-0 libsmpp34-1 libmagickcore-6.q16-6 \
+        libvlccore9 libvlc5 libopusfile0 libopusenc0 libsnmp40 libperl5.36 \
+        libcodec2-1.0 libvo-amrwbenc0 libopencore-amrwb0 librabbitmq4 \
+        libasound2 libsphinxbase3 libpocketsphinx3 \
         ca-certificates tini gettext-base postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
@@ -106,13 +115,6 @@ RUN ldconfig
 ENV PATH="/usr/local/freeswitch/bin:${PATH}"
 
 WORKDIR /usr/local/freeswitch
-
-# SIP signaling
-EXPOSE 5060/udp 5060/tcp 5080/udp 5080/tcp
-# RTP media
-EXPOSE 16384-16484/udp
-# Event Socket Library
-EXPOSE 8021/tcp
 
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
