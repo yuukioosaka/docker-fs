@@ -21,6 +21,7 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
+    environment: prod
     outputs:
       version: ${{ steps.resolve.outputs.version }}
       build: ${{ steps.resolve.outputs.build }}
@@ -34,6 +35,11 @@ jobs:
           FORCE: ${{ inputs.force }}
         run: |
           set -euo pipefail
+
+          if [ -z "${DOCKERHUB_USERNAME:-}" ] || [ -z "${DOCKERHUB_TOKEN:-}" ]; then
+            echo "::error::DOCKERHUB_USERNAME / DOCKERHUB_TOKEN are not set. Add them as secrets on the 'prod' environment (Settings > Environments > prod > Environment secrets)."
+            exit 1
+          fi
 
           # Upstream release tags are plain semver ("v1.11.3"); there are also
           # distro-style tags we do not want, so filter and version-sort.
@@ -88,6 +94,7 @@ jobs:
     needs: check
     if: needs.check.outputs.build == 'true'
     runs-on: ubuntu-latest
+    environment: prod
     steps:
       - name: Checkout
         uses: actions/checkout@v4
