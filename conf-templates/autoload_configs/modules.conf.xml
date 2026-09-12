@@ -2,7 +2,10 @@
   <modules>
     <!-- Generated from modules.conf.in by tools/gen-modules-conf.sh.
          Only modules compiled into this image are listed: loading a
-         module that was not built logs a [CRIT] at startup. -->
+         module that was not built logs a [CRIT] at startup.
+         Built but intentionally not autoloaded:
+           mod_amqp
+    -->
     <load module="mod_avmd"/>
     <load module="mod_bert"/>
     <load module="mod_blacklist"/>
@@ -55,7 +58,6 @@
     <load module="mod_skinny"/>
     <load module="mod_sofia"/>
     <load module="mod_verto"/>
-    <load module="mod_amqp"/>
     <load module="mod_cdr_csv"/>
     <load module="mod_cdr_sqlite"/>
     <load module="mod_event_multicast"/>

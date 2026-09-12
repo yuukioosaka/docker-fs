@@ -1,4 +1,4 @@
-FROM debian:bookworm-slim AS build
+FROM debian:trixie-slim AS build
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -yq --no-install-recommends install \
         git wget ca-certificates gnupg2 lsb-release \
@@ -17,7 +17,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -yq --no-install-re
         libexpat1-dev libgdbm-dev bison libtpl-dev libtiff-dev \
         uuid-dev libpcre2-dev libedit-dev libsqlite3-dev libcurl4-openssl-dev \
         libogg-dev libspeex-dev libspeexdsp-dev libldns-dev \
-        python3-dev python3-distutils python3-setuptools \
+        python3-dev python3-setuptools \
         liblua5.4-dev libopus-dev libpq-dev \
         libsndfile1-dev libflac-dev libvorbis-dev default-libmysqlclient-dev \
         libshout3-dev libmpg123-dev libmp3lame-dev \
@@ -88,23 +88,26 @@ RUN ./bootstrap.sh -j \
 RUN rm -rf /usr/src/freeswitch/.git /usr/src/libs/*/.git
 
 # ---------------------------------------------------------------------------
-FROM debian:bookworm-slim
+FROM debian:trixie-slim
 
 LABEL org.opencontainers.image.title="FreeSWITCH" \
       org.opencontainers.image.source="https://github.com/signalwire/freeswitch"
 
-# libpython3.11 is not a dependency of python3, but mod_python3.so links
-# against libpython3.11.so.1.0 at load time.
+# Package names differ from bookworm: several libraries were renamed for the
+# 64-bit time_t transition (t64 suffix), and flac, libhiredis, libcodec2,
+# libcurl, and openldap all bumped their soname. libpython3.13 is not a
+# dependency of python3, but mod_python3.so links against libpython3.13.so.1.0
+# at load time.
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -yq --no-install-recommends install \
-        libssl3 zlib1g libdb5.3 unixodbc libncurses6 libexpat1 libgdbm6 \
-        libtiff6 uuid-runtime libpcre2-8-0 libedit2 libsqlite3-0 libcurl4 \
-        libogg0 libspeex1 libspeexdsp1 libldns3 python3 libpython3.11 \
-        liblua5.4-0 libopus0 libpq5 libsndfile1 libflac12 \
-        libvorbis0a libshout3 libmpg123-0 libmp3lame0 \
+        libssl3t64 zlib1g libdb5.3t64 unixodbc libncurses6 libexpat1 libgdbm6t64 \
+        libtiff6 uuid-runtime libpcre2-8-0 libedit2 libsqlite3-0 libcurl4t64 \
+        libogg0 libspeex1 libspeexdsp1 libldns3t64 python3 libpython3.13 \
+        liblua5.4-0 libopus0 libpq5 libsndfile1 libflac14 \
+        libvorbis0a libshout3 libmpg123-0t64 libmp3lame0 \
         libvorbisfile3 libtpl0 \
-        libhiredis0.14 libmariadb3 libldap-2.5-0 \
+        libhiredis1.1.0 libmariadb3 libldap2 \
         libopusfile0 libopusenc0 \
-        libcodec2-1.0 librabbitmq4 \
+        libcodec2-1.2 librabbitmq4 \
         ca-certificates tini gettext-base postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
