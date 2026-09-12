@@ -12,13 +12,13 @@ A containerized build of [FreeSWITCH](https://github.com/signalwire/freeswitch),
 
 ## Enabled Modules
 
-80 modules are compiled into the image. `modules.conf.in` is the source of truth; the table below mirrors it.
+78 modules are compiled into the image. `modules.conf.in` is the source of truth; the table below mirrors it.
 
 | Category | Modules |
 |---|---|
 | Applications | av, avmd, bert, blacklist, callcenter, cidlookup, commands, conference, curl, db, directory, distributor, dptools, easyroute, enum, esl, expr, fifo, fsk, hash, hiredis, httapi, http_cache, lcr, nibblebill, prefix, redis, signalwire, sms, spandsp, translate, valet_parking, video_filter, vmd, voicemail, voicemail_ivr |
 | ASR/TTS | tts_commandline |
-| Codecs | amr, amrwb, b64, codec2, g723_1, g729, opus |
+| Codecs | amr, amrwb, b64, opus |
 | Databases | mariadb, pgsql |
 | Dialplans | dialplan_asterisk, dialplan_directory, dialplan_xml |
 | Directories | ldap |
@@ -31,7 +31,7 @@ A containerized build of [FreeSWITCH](https://github.com/signalwire/freeswitch),
 | Timers | timerfd |
 | XML Interfaces | xml_cdr, xml_curl, xml_ldap, xml_rpc, xml_scgi |
 
-**Not loaded by default**: `mod_amr`, `mod_amrwb`, `mod_g729`, `mod_g723_1`, and `mod_codec2` are compiled into the image but left out of the startup list. The first four are an opt-in for licensing reasons — AMR/AMRWB carry patent obligations in most jurisdictions, and G.729/G.723.1 are grouped with them for consistency (G.729's patents expired in 2017). `mod_codec2` only fails because upstream ships no `codec2.conf`. Load any of them by adding a `<load module="..."/>` line to your own `modules.conf.xml`; no rebuild is needed. See Disclaimer.
+**Not loaded by default**: `mod_amr` and `mod_amrwb` are compiled into the image and really do transcode (unlike `mod_g729`/`mod_g723_1`, which upstream can only build as passthrough — those are not built here at all). They are left out of the startup list because AMR/AMR-WB carry patent obligations in most jurisdictions, so an unmodified container never offers them in a codec negotiation. Load them by adding a `<load module="..."/>` line to your own `modules.conf.xml`; no rebuild is needed. See Disclaimer.
 
 `mod_av` **is** built and loaded by default (FFmpeg-based video/recording support); see Disclaimer for the GPL/LGPL and H.264/AAC considerations that come with it.
 
@@ -86,7 +86,7 @@ docker run --rm <image> tar -C /usr/local/freeswitch -cf - etc/freeswitch | tar 
 - **Persistent state**: mount `var/lib/freeswitch` to avoid losing registrations, CDRs, and recorded calls on container recreation.
 - **PostgreSQL**: `postgresql-client` and ODBC support (`--enable-core-odbc-support`, `unixodbc`) are built in, so the core DB can point at an external Postgres/MariaDB instead of the bundled sqlite.
 - **RTP range**: set `rtp-start-port`/`rtp-end-port` in `autoload_configs/switch.conf.xml` and publish the same range.
-- **Additional/replacement codecs**: the codecs left out of the startup list (`mod_amr`, `mod_amrwb`, `mod_g729`, `mod_g723_1`, `mod_codec2`) are already compiled in — just add a `<load>` line. For something not built at all, rebuild with a modified `modules.conf.in` — see Disclaimer for the licensing considerations that come with the codecs.
+- **Additional/replacement codecs**: `mod_amr` and `mod_amrwb` are already compiled in — just add a `<load>` line. For something not built at all (G.729, G.723.1, Codec2), rebuild with a modified `modules.conf.in` — see Disclaimer for the licensing considerations that come with the codecs.
 
 ## Constraints
 
@@ -105,7 +105,7 @@ The maintainer(s) of this image are not affiliated with SignalWire or the FreeSW
 
 - reviewing and hardening default credentials, ACLs, and exposed ports before any network-facing deployment
 - compliance with applicable telecom regulations in your jurisdiction
-- verifying license compliance for all bundled and third-party dependencies. FreeSWITCH itself is MPL 1.1. `mod_amr`, `mod_amrwb`, `mod_g729`, and `mod_g723_1` are compiled in but not loaded by default: AMR/AMRWB carry patent obligations in most jurisdictions, so enabling them is your decision. `mod_av` is linked against FFmpeg and loaded by default, which raises GPL/LGPL relicensing questions and possible H.264/AAC patent exposure depending on how you use it
+- verifying license compliance for all bundled and third-party dependencies. FreeSWITCH itself is MPL 1.1. `mod_amr` and `mod_amrwb` are compiled in but not loaded by default: AMR/AMR-WB carry patent obligations in most jurisdictions, so enabling them is your decision. `mod_av` is linked against FFmpeg and loaded by default, which raises GPL/LGPL relicensing questions and possible H.264/AAC patent exposure depending on how you use it
 - any data loss, service interruption, toll fraud, or other damages arising from use of this image
 
 No support or SLA is implied. Issues can be filed on the repository, but response and fixes are not guaranteed.

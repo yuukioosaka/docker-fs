@@ -39,18 +39,16 @@ mkdir -p "$(dirname "$OUT")"
 #   mod_xml_ldap    opens xml_ldap.conf, which does not exist by default
 #   mod_codec2      opens codec2.conf, which does not exist by default
 #
-# The codecs below are a deliberate opt-in for licensing reasons rather than a
-# configuration problem: they all load cleanly, but AMR/AMRWB and G.729/G.723.1
-# can carry patent or licensing obligations depending on jurisdiction and use.
-# Keeping them out of the default startup list means an unmodified container
-# never offers them in a codec negotiation.
+# The AMR codecs below are a deliberate opt-in for licensing reasons rather than
+# a configuration problem: they load cleanly and really do transcode, but AMR
+# and AMR-WB carry patent obligations in most jurisdictions. Keeping them out
+# of the default startup list means an unmodified container never offers them
+# in a codec negotiation.
 #
 #   mod_amr         patent-encumbered in most jurisdictions
 #   mod_amrwb       patent-encumbered in most jurisdictions
-#   mod_g729        patents expired (2017), but kept opt-in for consistency
-#   mod_g723_1      kept opt-in for consistency with the codecs above
 #
-# All twelve are still built, so enabling one needs no rebuild: add a
+# All ten are still built, so enabling one needs no rebuild: add a
 # <load module="..."/> line to your own modules.conf.xml (and, for the
 # modules that need it, supply the configuration they read).
 NOT_AUTOLOAD_MODULES=(
@@ -64,8 +62,6 @@ NOT_AUTOLOAD_MODULES=(
   mod_codec2
   mod_amr
   mod_amrwb
-  mod_g729
-  mod_g723_1
 )
 
 is_not_autoloaded() {

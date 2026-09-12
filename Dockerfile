@@ -21,9 +21,10 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -yq --no-install-re
         liblua5.4-dev libopus-dev libpq-dev \
         libsndfile1-dev libflac-dev libvorbis-dev default-libmysqlclient-dev \
         libshout3-dev libmpg123-dev libmp3lame-dev \
-        libnode-dev librabbitmq-dev libcodec2-dev \
+        libnode-dev librabbitmq-dev \
         libhiredis-dev libmariadb-dev libldap2-dev \
         libopusfile-dev libopusenc-dev \
+        libopencore-amrnb-dev libopencore-amrwb-dev libvo-amrwbenc-dev \
         libavformat-dev libavcodec-dev libswscale-dev \
         libavutil-dev libswresample-dev \
     && rm -rf /var/lib/apt/lists/*
@@ -102,7 +103,7 @@ LABEL org.opencontainers.image.title="FreeSWITCH" \
       org.opencontainers.image.source="https://github.com/signalwire/freeswitch"
 
 # Package names differ from bookworm: several libraries were renamed for the
-# 64-bit time_t transition (t64 suffix), and flac, libhiredis, libcodec2,
+# 64-bit time_t transition (t64 suffix), and flac, libhiredis,
 # libcurl, and openldap all bumped their soname. libpython3.13 is not a
 # dependency of python3, but mod_python3.so links against libpython3.13.so.1.0
 # at load time.
@@ -115,7 +116,8 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -yq --no-install-re
         libvorbisfile3 libtpl0 \
         libhiredis1.1.0 libmariadb3 libldap2 \
         libopusfile0 libopusenc0 \
-        librabbitmq4 libcodec2-1.2 \
+        librabbitmq4 \
+        libopencore-amrnb0 libopencore-amrwb0 libvo-amrwbenc0 \
         libavformat61 libavcodec61 libswscale8 libavutil59 libswresample5 \
         ca-certificates tini gettext-base postgresql-client \
     && rm -rf /var/lib/apt/lists/*

@@ -14,8 +14,6 @@
            mod_codec2
            mod_amr
            mod_amrwb
-           mod_g729
-           mod_g723_1
     -->
     <load module="mod_av"/>
     <load module="mod_avmd"/>
