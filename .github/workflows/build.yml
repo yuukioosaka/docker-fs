@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       force:
-        description: "Build even if the version has not changed"
+        description: "Rebuild even if the image tag already exists"
         type: boolean
         default: false
 
@@ -16,76 +16,81 @@ env:
   UPSTREAM_REPO: signalwire/freeswitch
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   check:
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.version.outputs.version }}
-      changed: ${{ steps.version.outputs.changed }}
+      version: ${{ steps.resolve.outputs.version }}
+      build: ${{ steps.resolve.outputs.build }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Resolve current state (upstream tag + last built tag)
-        id: version
+      - name: Resolve latest upstream tag
+        id: resolve
         env:
           GH_TOKEN: ${{ github.token }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
           FORCE: ${{ inputs.force }}
         run: |
           set -euo pipefail
 
-          # Upstream tags are plain semver ("v1.10.12"), created by signalwire's
-          # release process. `sort -V` gives us the highest one.
+          # Upstream release tags are plain semver ("v1.11.3"); there are also
+          # distro-style tags we do not want, so filter and version-sort.
           latest=$(gh api "repos/${UPSTREAM_REPO}/tags" --paginate \
             --jq '.[].name' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n1)
           if [ -z "$latest" ]; then
             echo "::error::could not resolve upstream FreeSWITCH tags"
             exit 1
           fi
-
-          # The tag actually baked into the Dockerfile is the source of truth for
-          # "what did we last build".
-          current=$(sed -n 's/^ARG FS_VERSION=//p' Dockerfile | head -n1)
-          echo "upstream=$latest current=$current"
-
+          echo "latest upstream tag: $latest"
           echo "version=$latest" >> "$GITHUB_OUTPUT"
 
-          if [ "$latest" != "$current" ] || [ "${FORCE:-false}" = "true" ]; then
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-            echo "Up to date at $current, nothing to do."
+          # Ask the registry rather than the Docker Hub API: the Hub API needs
+          # a token with read scope and rate-limits aggressively, whereas the
+          # registry is authoritative for the exact tag we are about to push.
+          #
+          # We authenticate so a private repo is distinguishable from a missing
+          # one. Anonymous requests answer 401 for both, which would make a
+          # private repo rebuild every day forever.
+          repo="${DOCKERHUB_USERNAME}/${IMAGE_NAME}"
+          token=$(curl -fsS \
+            --user "${DOCKERHUB_USERNAME}:${DOCKERHUB_TOKEN}" \
+            "https://auth.docker.io/token?service=registry.docker.io&scope=repository:${repo}:pull" \
+            | jq -r .token)
+
+          code=$(curl -sS -o /dev/null -w '%{http_code}' \
+            -H "Authorization: Bearer ${token}" \
+            -H 'Accept: application/vnd.oci.image.index.v1+json,application/vnd.docker.distribution.manifest.list.v2+json,application/vnd.docker.distribution.manifest.v2+json' \
+            "https://registry-1.docker.io/v2/${repo}/manifests/${latest}")
+
+          case "$code" in
+            200)
+              echo "image ${repo}:${latest} already exists on Docker Hub"
+              echo "build=false" >> "$GITHUB_OUTPUT"
+              ;;
+            404)
+              echo "image ${repo}:${latest} not found, will build"
+              echo "build=true" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "::error::unexpected registry response ${code} for ${repo}:${latest}"
+              exit 1
+              ;;
+          esac
+
+          if [ "${FORCE:-false}" = "true" ]; then
+            echo "force rebuild requested"
+            echo "build=true" >> "$GITHUB_OUTPUT"
           fi
-
-      - name: Bump FS_VERSION in Dockerfile
-        if: steps.version.outputs.changed == 'true'
-        run: |
-          sed -i "s|^ARG FS_VERSION=.*|ARG FS_VERSION=${{ steps.version.outputs.version }}|" Dockerfile
-          git --no-pager diff -- Dockerfile
-
-      - name: Commit version bump
-        if: steps.version.outputs.changed == 'true'
-        run: |
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add Dockerfile
-          git diff --cached --quiet && exit 0
-          git commit -m "chore: bump FreeSWITCH to ${{ steps.version.outputs.version }}"
-          git push
 
   build:
     needs: check
-    if: needs.check.outputs.changed == 'true'
+    if: needs.check.outputs.build == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.ref_name }}
 
       - name: Set up Buildx
         uses: docker/setup-buildx-action@v3
@@ -96,6 +101,9 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Write FS_VERSION
+        run: printf '%s\n' "${{ needs.check.outputs.version }}" > FS_VERSION
+
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
@@ -103,10 +111,6 @@ jobs:
           file: ./Dockerfile
           platforms: linux/amd64
           push: true
-          build-args: |
-            FS_VERSION=${{ needs.check.outputs.version }}
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ needs.check.outputs.version }}
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max

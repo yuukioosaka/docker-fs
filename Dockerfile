@@ -1,7 +1,5 @@
 FROM debian:bookworm-slim AS build
 
-ARG FS_VERSION=v1.11.3
-
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -yq install \
         git wget ca-certificates gnupg2 lsb-release \
     && rm -rf /var/lib/apt/lists/*
@@ -52,7 +50,14 @@ RUN git clone --depth 1 https://github.com/signalwire/signalwire-c.git signalwir
     && make -j"$(nproc)" && make install
 
 # --- FreeSWITCH itself ---
-RUN git clone --depth 1 --branch "${FS_VERSION}" \
+# The version lives in ./FS_VERSION rather than an ARG so this file stays
+# constant across releases: an ARG change would invalidate every layer after
+# the clone, including all of the dependency builds above.
+COPY FS_VERSION /tmp/FS_VERSION
+RUN set -eux; \
+    FS_VERSION="$(cat /tmp/FS_VERSION)"; \
+    rm -f /tmp/FS_VERSION; \
+    git clone --depth 1 --branch "$FS_VERSION" \
         https://github.com/signalwire/freeswitch.git /usr/src/freeswitch
 
 WORKDIR /usr/src/freeswitch
