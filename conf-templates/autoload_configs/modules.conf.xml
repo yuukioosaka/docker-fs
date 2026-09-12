@@ -4,19 +4,31 @@
          Only modules compiled into this image are listed: loading a
          module that was not built logs a [CRIT] at startup.
          Built but intentionally not autoloaded:
-           mod_amqp
            mod_lcr
            mod_fail2ban
            mod_json_cdr
            mod_odbc_cdr
            mod_xml_curl
            mod_xml_ldap
-           mod_codec2
+           mod_amqp
            mod_amr
            mod_amrwb
+           mod_spy
+           mod_skinny
+           mod_verto
+           mod_rtc
+           mod_enum
+           mod_fsk
+           mod_b64
+           mod_png
+           mod_shout
+           mod_local_stream
+           mod_nibblebill
+           mod_avmd
+           mod_video_filter
+           mod_xml_scgi
     -->
     <load module="mod_av"/>
-    <load module="mod_avmd"/>
     <load module="mod_bert"/>
     <load module="mod_blacklist"/>
     <load module="mod_callcenter"/>
@@ -29,27 +41,22 @@
     <load module="mod_distributor"/>
     <load module="mod_dptools"/>
     <load module="mod_easyroute"/>
-    <load module="mod_enum"/>
     <load module="mod_esl"/>
     <load module="mod_expr"/>
     <load module="mod_fifo"/>
-    <load module="mod_fsk"/>
     <load module="mod_hash"/>
     <load module="mod_hiredis"/>
     <load module="mod_httapi"/>
     <load module="mod_http_cache"/>
-    <load module="mod_nibblebill"/>
     <load module="mod_prefix"/>
     <load module="mod_signalwire"/>
     <load module="mod_sms"/>
     <load module="mod_spandsp"/>
     <load module="mod_translate"/>
     <load module="mod_valet_parking"/>
-    <load module="mod_video_filter"/>
     <load module="mod_voicemail"/>
     <load module="mod_voicemail_ivr"/>
     <load module="mod_tts_commandline"/>
-    <load module="mod_b64"/>
     <load module="mod_opus"/>
     <load module="mod_mariadb"/>
     <load module="mod_pgsql"/>
@@ -58,19 +65,13 @@
     <load module="mod_dialplan_xml"/>
     <load module="mod_ldap"/>
     <load module="mod_loopback"/>
-    <load module="mod_rtc"/>
-    <load module="mod_skinny"/>
     <load module="mod_sofia"/>
-    <load module="mod_verto"/>
     <load module="mod_cdr_csv"/>
     <load module="mod_cdr_sqlite"/>
     <load module="mod_event_multicast"/>
     <load module="mod_event_socket"/>
     <load module="mod_format_cdr"/>
-    <load module="mod_local_stream"/>
     <load module="mod_native_file"/>
-    <load module="mod_png"/>
-    <load module="mod_shout"/>
     <load module="mod_sndfile"/>
     <load module="mod_tone_stream"/>
     <load module="mod_opusfile"/>
@@ -83,6 +84,5 @@
     <load module="mod_timerfd"/>
     <load module="mod_xml_cdr"/>
     <load module="mod_xml_rpc"/>
-    <load module="mod_xml_scgi"/>
   </modules>
 </configuration>

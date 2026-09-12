@@ -23,45 +23,71 @@ OUT=${2:-conf-templates/autoload_configs/modules.conf.xml}
 [[ -f "$SRC" ]] || { echo "missing $SRC" >&2; exit 1; }
 mkdir -p "$(dirname "$OUT")"
 
-# Compiled, but not loaded at startup unless the user opts in.
+# Modules that are compiled but deliberately kept out of the startup list.
 #
-#   mod_amqp: connects to an AMQP broker on load and retries forever if none is
-#             reachable, filling the log with [CRIT]/[WARNING] on every boot.
+# A module is excluded for one of three reasons:
 #
-# The rest fail their load routine outright because upstream ships no config
-# for them, so every default start logs an "Error Loading module" [CRIT]:
+# 1. It fails its load routine unless the user supplies configuration that
+#    upstream does not ship, so every default boot logs a [CRIT]:
 #
-#   mod_lcr         needs an ODBC DSN and an lcr.conf.xml
-#   mod_fail2ban    opens fail2ban.conf, which does not exist by default
-#   mod_json_cdr    opens json_cdr.conf, which does not exist by default
-#   mod_odbc_cdr    opens odbc_cdr.conf, which does not exist by default
-#   mod_xml_curl    has no <binding> URL configured by default
-#   mod_xml_ldap    opens xml_ldap.conf, which does not exist by default
-#   mod_codec2      opens codec2.conf, which does not exist by default
+#      mod_lcr         needs an ODBC DSN and an lcr.conf.xml
+#      mod_fail2ban    opens fail2ban.conf, which does not exist by default
+#      mod_json_cdr    opens json_cdr.conf, which does not exist by default
+#      mod_odbc_cdr    opens odbc_cdr.conf, which does not exist by default
+#      mod_xml_curl    has no <binding> URL configured by default
+#      mod_xml_ldap    opens xml_ldap.conf, which does not exist by default
 #
-# The AMR codecs below are a deliberate opt-in for licensing reasons rather than
-# a configuration problem: they load cleanly and really do transcode, but AMR
-# and AMR-WB carry patent obligations in most jurisdictions. Keeping them out
-# of the default startup list means an unmodified container never offers them
-# in a codec negotiation.
+# 2. It loads cleanly but is opt-in for licensing, safety, or scope reasons:
 #
-#   mod_amr         patent-encumbered in most jurisdictions
-#   mod_amrwb       patent-encumbered in most jurisdictions
+#      mod_amqp        retries a broker connection forever, flooding the log
+#      mod_amr         patent-encumbered in most jurisdictions
+#      mod_amrwb       patent-encumbered in most jurisdictions
+#      mod_spy         installs surveillance commands (spy, eavesdrop)
 #
-# All ten are still built, so enabling one needs no rebuild: add a
-# <load module="..."/> line to your own modules.conf.xml (and, for the
-# modules that need it, supply the configuration they read).
+# 3. It is not needed for a typical voice deployment and would only widen
+#    the attack surface or the codec/protocol surface on offer:
+#
+#      mod_skinny        legacy Cisco SCCP; SIP phones do not need it
+#      mod_verto         Verto WebRTC client protocol; sofia WSS covers WebRTC
+#      mod_rtc           Google WebRTC RTC, effectively Verto-only
+#      mod_enum          E.164 ENUM resolution; unused without carrier ENUM
+#      mod_fsk           FSK modem signalling for legacy caller-ID
+#      mod_b64           base64 pseudo-codec; internal use only
+#      mod_png           PNG image files
+#      mod_shout         MP3/Shoutcast streaming; MoH uses WAV over sndfile
+#      mod_local_stream  local stream playback; MoH uses WAV over sndfile
+#      mod_nibblebill    prepaid billing
+#      mod_avmd          voicemail beep detection for outbound AMD
+#      mod_video_filter  video filtering; audio-only deployments
+#      mod_xml_scgi      SCGI XML backend; fails to connect unless a server runs
+#
+# Every module here is still compiled into the image, so enabling one needs no
+# rebuild: add a <load module="..."/> line to your own modules.conf.xml (and,
+# for the group-1 modules, supply the configuration they read).
 NOT_AUTOLOAD_MODULES=(
-  mod_amqp
   mod_lcr
   mod_fail2ban
   mod_json_cdr
   mod_odbc_cdr
   mod_xml_curl
   mod_xml_ldap
-  mod_codec2
+  mod_amqp
   mod_amr
   mod_amrwb
+  mod_spy
+  mod_skinny
+  mod_verto
+  mod_rtc
+  mod_enum
+  mod_fsk
+  mod_b64
+  mod_png
+  mod_shout
+  mod_local_stream
+  mod_nibblebill
+  mod_avmd
+  mod_video_filter
+  mod_xml_scgi
 )
 
 is_not_autoloaded() {

@@ -12,28 +12,44 @@ A containerized build of [FreeSWITCH](https://github.com/signalwire/freeswitch),
 
 ## Enabled Modules
 
-78 modules are compiled into the image. `modules.conf.in` is the source of truth; the table below mirrors it.
+79 modules are compiled into the image and 56 of them are loaded at startup. [`modules.conf.in`](https://github.com/yuukioosaka/docker-fs/blob/main/modules.conf.in) is the source of truth for what gets built; `tools/gen-modules-conf.sh` turns it into the startup list.
+
+The table below lists what is **loaded by default**.
 
 | Category | Modules |
 |---|---|
-| Applications | av, avmd, bert, blacklist, callcenter, cidlookup, commands, conference, curl, db, directory, distributor, dptools, easyroute, enum, esl, expr, fifo, fsk, hash, hiredis, httapi, http_cache, lcr, nibblebill, prefix, redis, signalwire, sms, spandsp, translate, valet_parking, video_filter, vmd, voicemail, voicemail_ivr |
+| Applications | av, bert, blacklist, callcenter, cidlookup, commands, conference, curl, db, directory, distributor, dptools, easyroute, esl, expr, fifo, hash, hiredis, httapi, http_cache, prefix, signalwire, sms, spandsp, translate, valet_parking, voicemail, voicemail_ivr |
 | ASR/TTS | tts_commandline |
-| Codecs | amr, amrwb, b64, opus |
+| Codecs | opus |
 | Databases | mariadb, pgsql |
 | Dialplans | dialplan_asterisk, dialplan_directory, dialplan_xml |
 | Directories | ldap |
-| Endpoints | loopback, rtc, skinny, sofia, verto |
-| Event Handlers | amqp, cdr_csv, cdr_sqlite, event_multicast, event_socket, fail2ban, format_cdr, json_cdr, odbc_cdr |
-| Formats | local_stream, native_file, opusfile, png, shout, sndfile, tone_stream |
+| Endpoints | loopback, sofia |
+| Event Handlers | cdr_csv, cdr_sqlite, event_multicast, event_socket, format_cdr |
+| Formats | native_file, opusfile, sndfile, tone_stream |
 | Languages | lua, python3 |
 | Loggers | console, logfile, syslog |
 | Say | en |
 | Timers | timerfd |
-| XML Interfaces | xml_cdr, xml_curl, xml_ldap, xml_rpc, xml_scgi |
+| XML Interfaces | xml_cdr, xml_rpc |
 
-**Not loaded by default**: `mod_amr` and `mod_amrwb` are compiled into the image and really do transcode (unlike `mod_g729`/`mod_g723_1`, which upstream can only build as passthrough — those are not built here at all). They are left out of the startup list because AMR/AMR-WB carry patent obligations in most jurisdictions, so an unmodified container never offers them in a codec negotiation. Load them by adding a `<load module="..."/>` line to your own `modules.conf.xml`; no rebuild is needed. See Disclaimer.
+### Compiled but not loaded
 
-`mod_av` **is** built and loaded by default (FFmpeg-based video/recording support); see Disclaimer for the GPL/LGPL and H.264/AAC considerations that come with it.
+The remaining 23 modules are built and present in `lib/freeswitch/mod/`, but left out of the startup list. Enable any of them by adding a `<load module="..."/>` line to your own `modules.conf.xml` — no rebuild is needed:
+
+| Modules | Why they are not loaded |
+|---|---|
+| `mod_lcr`, `mod_fail2ban`, `mod_json_cdr`, `mod_odbc_cdr`, `mod_xml_curl`, `mod_xml_ldap` | Fail their load routine unless you supply a config file upstream does not ship, so they would log a `[CRIT]` on every boot |
+| `mod_amqp` | Retries its broker connection forever, flooding the log |
+| `mod_amr`, `mod_amrwb` | Load and transcode fine, but AMR/AMR-WB carry patent obligations in most jurisdictions |
+| `mod_spy` | Installs surveillance commands (`spy`, `eavesdrop`) |
+| `mod_skinny`, `mod_verto`, `mod_rtc` | Legacy Cisco SCCP and WebRTC signalling that `mod_sofia` already covers |
+| `mod_enum`, `mod_fsk`, `mod_b64`, `mod_png` | ENUM resolution, legacy FSK caller-ID, and internal-use formats |
+| `mod_shout`, `mod_local_stream` | Streaming and local stream playback; Music-on-Hold uses WAV via `mod_sndfile` |
+| `mod_nibblebill`, `mod_avmd`, `mod_video_filter` | Prepaid billing, outbound beep detection, and video filtering |
+| `mod_xml_scgi` | SCGI XML backend; logs a connection failure unless a server is running |
+
+`mod_av` **is** loaded by default (FFmpeg-based video/recording support); see Disclaimer for the GPL/LGPL and H.264/AAC considerations that come with it.
 
 ## Directory Layout (prefix: `/usr/local/freeswitch`)
 
