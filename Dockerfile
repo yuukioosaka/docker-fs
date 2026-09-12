@@ -24,7 +24,6 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -yq --no-install-re
         libnode-dev librabbitmq-dev libcodec2-dev \
         libhiredis-dev libmariadb-dev libldap2-dev \
         libopusfile-dev libopusenc-dev \
-        libvo-amrwbenc-dev libopencore-amrwb-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /usr/src/libs
@@ -73,6 +72,12 @@ WORKDIR /usr/src/freeswitch
 # dependencies exist in Debian bookworm.
 COPY modules.conf.in /usr/src/freeswitch/build/modules.conf.in
 
+# The shipped autoload list names every module upstream knows about, so the
+# ones we do not compile log a [CRIT] at every startup. Replace it with one
+# generated from the same list that drives the build.
+COPY conf-templates/autoload_configs/modules.conf.xml \
+     /usr/src/freeswitch/conf/vanilla/autoload_configs/modules.conf.xml
+
 RUN ./bootstrap.sh -j \
     && ./configure --prefix=/usr/local/freeswitch --enable-core-odbc-support \
     && make -j"$(nproc)" \
@@ -88,16 +93,18 @@ FROM debian:bookworm-slim
 LABEL org.opencontainers.image.title="FreeSWITCH" \
       org.opencontainers.image.source="https://github.com/signalwire/freeswitch"
 
+# libpython3.11 is not a dependency of python3, but mod_python3.so links
+# against libpython3.11.so.1.0 at load time.
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -yq --no-install-recommends install \
         libssl3 zlib1g libdb5.3 unixodbc libncurses6 libexpat1 libgdbm6 \
         libtiff6 uuid-runtime libpcre2-8-0 libedit2 libsqlite3-0 libcurl4 \
-        libogg0 libspeex1 libspeexdsp1 libldns3 python3 \
+        libogg0 libspeex1 libspeexdsp1 libldns3 python3 libpython3.11 \
         liblua5.4-0 libopus0 libpq5 libsndfile1 libflac12 \
         libvorbis0a libshout3 libmpg123-0 libmp3lame0 \
-        libvorbisfile3 libtpl0 libnode108 \
+        libvorbisfile3 libtpl0 \
         libhiredis0.14 libmariadb3 libldap-2.5-0 \
         libopusfile0 libopusenc0 \
-        libcodec2-1.0 libvo-amrwbenc0 libopencore-amrwb0 librabbitmq4 \
+        libcodec2-1.0 librabbitmq4 \
         ca-certificates tini gettext-base postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 

@@ -7,18 +7,20 @@ A containerized build of [FreeSWITCH](https://github.com/signalwire/freeswitch),
 - FreeSWITCH core built from source; the dependencies libks, sofia-sip, spandsp, and signalwire-c are also compiled from source
 - English sound files and Music-on-Hold (`sounds-install`, `moh-install`)
 - Multi-stage build — the final image ships only runtime libraries, not the build toolchain
-- Module set defined by a custom [`modules.conf.in`](https://github.com/yuukioosaka/docker-fs/blob/main/modules.conf.in), copied over the upstream file during the build
+- Module set defined by a custom [`modules.conf.in`](https://github.com/yuukioosaka/docker-fs/blob/main/modules.conf.in), copied over the upstream file during the build; the startup module list is generated from it by `tools/gen-modules-conf.sh`
 - FreeSWITCH version pinned by [`FS_VERSION`](https://github.com/yuukioosaka/docker-fs/blob/main/FS_VERSION) and resolved to the latest upstream release tag by CI
 
 ## Enabled Modules
 
-84 modules. `modules.conf.in` is the source of truth; the table below mirrors it.
+80 modules. `modules.conf.in` is the source of truth; the table below mirrors it.
+
+The image is ~514MB, down from ~1.5GB before the slimming described in "Why modules are disabled". Two things keep it there: `--no-install-recommends` on every apt install, and an apt package list that names only the libraries an enabled module actually links against.
 
 | Category | Modules |
 |---|---|
-| Applications | av, avmd, bert, blacklist, callcenter, cidlookup, commands, conference, curl, db, directory, distributor, dptools, easyroute, enum, esl, expr, fifo, fsk, hash, hiredis, httapi, http_cache, lcr, nibblebill, prefix, redis, signalwire, sms, spandsp, translate, valet_parking, video_filter, vmd, voicemail, voicemail_ivr |
-| ASR/TTS | pocketsphinx, tts_commandline |
-| Codecs | amr, amrwb, b64, codec2, g723_1, g729, opus |
+| Applications | avmd, bert, blacklist, callcenter, cidlookup, commands, conference, curl, db, directory, distributor, dptools, easyroute, enum, esl, expr, fifo, fsk, hash, hiredis, httapi, http_cache, lcr, nibblebill, prefix, redis, signalwire, sms, spandsp, translate, valet_parking, video_filter, vmd, voicemail, voicemail_ivr |
+| ASR/TTS | tts_commandline |
+| Codecs | b64, codec2, g723_1, g729, opus |
 | Databases | mariadb, pgsql |
 | Dialplans | dialplan_asterisk, dialplan_directory, dialplan_xml |
 | Directories | ldap |
@@ -31,9 +33,11 @@ A containerized build of [FreeSWITCH](https://github.com/signalwire/freeswitch),
 | Timers | timerfd |
 | XML Interfaces | xml_cdr, xml_curl, xml_ldap, xml_rpc, xml_scgi |
 
+The startup module list is generated from the same file by [`tools/gen-modules-conf.sh`](https://github.com/yuukioosaka/docker-fs/blob/main/tools/gen-modules-conf.sh). Upstream's shipped autoload list names every module it knows about, including ones this build does not compile, which makes FreeSWITCH log a `[CRIT]` for each at every startup. The generated list contains only what is actually present.
+
 ### Why modules are disabled
 
-The list is deliberately narrower than upstream. Two reasons drive the exclusions.
+The list is deliberately narrower than upstream. Three reasons drive the exclusions.
 
 **Dependencies missing from Debian bookworm.** These cannot be built without vendoring the library from source: `mod_bv`, `mod_ilbc`, `mod_silk`, `mod_siren`, `mod_flite`, `mod_h323`, `mod_opal`, `mod_osp`, `mod_cdr_pg_csv`, `mod_managed`, `mod_java`, `mod_v8`, `mod_perl`, `mod_basic`.
 
@@ -51,9 +55,13 @@ The list is deliberately narrower than upstream. Two reasons drive the exclusion
 | `mod_snapshot` | Narrow use case; `mod_sndfile` covers most needs |
 | `mod_spy` | Call interception — unnecessary attack surface |
 | `mod_shell_stream` | Executes shell commands — unnecessary attack surface |
-| `mod_cv`, `mod_imagick`, `mod_vlc` | Video/image processing. OpenCV and ImageMagick also pull in large GL/LLVM/GDAL/Ghostscript/X11 dependency chains |
+| `mod_av`, `mod_cv`, `mod_imagick`, `mod_vlc` | Video/image processing. Their libraries also pull in large GL/LLVM/GDAL/X11 chains, and ffmpeg alone carries ~40 CVEs on bookworm that Debian does not plan to fix |
+| `mod_pocketsphinx` | Speech recognition; the acoustic model alone is 15MB |
+| `mod_amr`, `mod_amrwb` | Narrow mobile-codec use case |
 | `mod_graylog2`, `mod_erlang_event` | Only useful if you run Graylog / Erlang |
 | `mod_memcache`, `mod_snmp` | Only useful if you use those services |
+
+`mod_amr` deserves an extra note: upstream's `configure` looks for `opencore-amrnb`, which was never in this image's apt list, so the module had silently failed to build long before it was disabled. If you need AMR-NB, re-enable `codecs/mod_amr` **and** add `libopencore-amrnb-dev` and `libopencore-amrnb0` to the two apt blocks.
 
 If your dialplan or config depends on any of these, fork and rebuild with a modified `modules.conf.in`.
 
@@ -121,3 +129,16 @@ docker run --rm <image> tar -C /usr/local/freeswitch -cf - etc/freeswitch | tar 
 - **No named volumes declared.** Config, logs, and DB directories are not `VOLUME`-declared, so data is ephemeral unless you explicitly bind/volume-mount those paths.
 - **RTP ports are not pre-exposed.** Publish the range manually and keep it in sync with your config.
 - **tini as PID 1** handles signal forwarding (SIGTERM/SIGHUP); graceful shutdown and reload behavior depend on FreeSWITCH's own signal handling.
+
+## Disclaimer
+
+This image is provided "as is", without warranty of any kind, express or implied, including but not limited to warranties of merchantability, fitness for a particular purpose, and non-infringement. **Use it at your own risk.**
+
+The maintainer(s) of this image are not affiliated with SignalWire or the FreeSWITCH project, and provide no guarantee of production-readiness, security hardening, or fitness for any telephony/regulatory use case (e.g. E911, lawful intercept, CALEA, GDPR, HIPAA). You are solely responsible for:
+
+- reviewing and hardening default credentials, ACLs, and exposed ports before any network-facing deployment
+- compliance with applicable telecom regulations in your jurisdiction
+- verifying license compliance for all bundled and third-party dependencies (FreeSWITCH is MPL 1.1; some optional codecs/libraries, e.g. G.729, may carry separate licensing/patent obligations depending on your usage and region)
+- any data loss, service interruption, toll fraud, or other damages arising from use of this image
+
+No support or SLA is implied. Issues can be filed on the repository, but response and fixes are not guaranteed.
