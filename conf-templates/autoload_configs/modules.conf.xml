@@ -29,6 +29,7 @@
            mod_xml_scgi
            mod_logfile
            mod_syslog
+           mod_cdr_sqlite
     -->
     <load module="mod_av"/>
     <load module="mod_bert"/>
@@ -69,7 +70,6 @@
     <load module="mod_loopback"/>
     <load module="mod_sofia"/>
     <load module="mod_cdr_csv"/>
-    <load module="mod_cdr_sqlite"/>
     <load module="mod_event_multicast"/>
     <load module="mod_event_socket"/>
     <load module="mod_format_cdr"/>

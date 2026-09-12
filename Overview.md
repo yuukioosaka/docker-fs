@@ -11,7 +11,7 @@ A containerized build of [FreeSWITCH](https://github.com/signalwire/freeswitch),
 
 ## Enabled Modules
 
-79 modules are compiled into the image and 54 of them are loaded at startup. [`modules.conf.in`](https://github.com/yuukioosaka/docker-fs/blob/main/modules.conf.in) is the source of truth for what gets built; `tools/gen-modules-conf.sh` turns it into the startup list.
+79 modules are compiled into the image and 53 of them are loaded at startup. [`modules.conf.in`](https://github.com/yuukioosaka/docker-fs/blob/main/modules.conf.in) is the source of truth for what gets built; `tools/gen-modules-conf.sh` turns it into the startup list.
 
 The table below lists what is **loaded by default**.
 
@@ -24,7 +24,7 @@ The table below lists what is **loaded by default**.
 | Dialplans | dialplan_asterisk, dialplan_directory, dialplan_xml |
 | Directories | ldap |
 | Endpoints | loopback, sofia |
-| Event Handlers | cdr_csv, cdr_sqlite, event_multicast, event_socket, format_cdr |
+| Event Handlers | cdr_csv, event_multicast, event_socket, format_cdr |
 | Formats | native_file, opusfile, sndfile, tone_stream |
 | Languages | lua, python3 |
 | Loggers | console |
@@ -34,7 +34,7 @@ The table below lists what is **loaded by default**.
 
 ### Compiled but not loaded
 
-The remaining 25 modules are built and present in `lib/freeswitch/mod/`, but left out of the startup list. Enable any of them by adding a `<load module="..."/>` line to your own `modules.conf.xml` — no rebuild is needed:
+The remaining 26 modules are built and present in `lib/freeswitch/mod/`, but left out of the startup list. Enable any of them by adding a `<load module="..."/>` line to your own `modules.conf.xml` — no rebuild is needed:
 
 | Modules | Why they are not loaded |
 |---|---|
@@ -47,6 +47,7 @@ The remaining 25 modules are built and present in `lib/freeswitch/mod/`, but lef
 | `mod_shout`, `mod_local_stream` | Streaming and local stream playback; Music-on-Hold uses WAV via `mod_sndfile` |
 | `mod_nibblebill`, `mod_avmd`, `mod_video_filter` | Prepaid billing, outbound beep detection, and video filtering |
 | `mod_xml_scgi` | SCGI XML backend; logs a connection failure unless a server is running |
+| `mod_cdr_sqlite` | Writes CDRs to a local sqlite file, which cannot be read by anything outside the container and duplicates the CSV/original CDR output already in place |
 | `mod_logfile` | Writes a second copy of every line to `var/log/freeswitch/freeswitch.log`, which nothing in the image rotates. Logs go to stdout instead, where `docker logs` and its `--log-opt max-size`/`max-file` can bound them. |
 | `mod_syslog` | Publishes to syslog; the image runs no syslog daemon, so it was writing into a socket nobody read |
 

@@ -70,6 +70,12 @@ mkdir -p "$(dirname "$OUT")"
 #      mod_syslog        logs to syslog; the image runs no syslog daemon, so it
 #                        was publishing into a socket nobody reads
 #
+# 5. It duplicates a record this image already keeps:
+#
+#      mod_cdr_sqlite    writes CDRs to a local sqlite file that nothing outside
+#                        the container can read, alongside the CSV that
+#                        mod_cdr_csv already produces
+#
 # Every module here is still compiled into the image, so enabling one needs no
 # rebuild: add a <load module="..."/> line to your own modules.conf.xml (and,
 # for the group-1 modules, supply the configuration they read).
@@ -99,6 +105,7 @@ NOT_AUTOLOAD_MODULES=(
   mod_xml_scgi
   mod_logfile
   mod_syslog
+  mod_cdr_sqlite
 )
 
 is_not_autoloaded() {
