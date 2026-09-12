@@ -110,6 +110,38 @@ jobs:
       - name: Write FS_VERSION
         run: printf '%s\n' "${{ needs.check.outputs.version }}" > FS_VERSION
 
+      - name: Delete existing image tags
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          VERSION: ${{ needs.check.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          auth=$(printf '%s' "$DOCKERHUB_USERNAME:$DOCKERHUB_TOKEN" | base64 -w0)
+
+          # Deleting a manifest (or the latest tag) keeps the old tag pointing at
+          # a stale image, so remove every tag that will be overwritten.
+          for tag in "$VERSION" latest; do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' \
+              -X DELETE \
+              -H "Authorization: Basic ${auth}" \
+              "https://hub.docker.com/v2/repositories/${DOCKERHUB_USERNAME}/${IMAGE_NAME}/tags/${tag}/")
+
+            case "$code" in
+              204)
+                echo "deleted ${IMAGE_NAME}:${tag}"
+                ;;
+              404)
+                echo "tag ${IMAGE_NAME}:${tag} does not exist, nothing to delete"
+                ;;
+              *)
+                echo "::error::failed to delete tag ${IMAGE_NAME}:${tag} (HTTP ${code})"
+                exit 1
+                ;;
+            esac
+          done
+
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
