@@ -118,22 +118,34 @@ jobs:
         run: |
           set -euo pipefail
 
-          auth=$(printf '%s' "$DOCKERHUB_USERNAME:$DOCKERHUB_TOKEN" | base64 -w0)
+          # The Hub API takes the JWT from /v2/users/login/, not HTTP Basic.
+          # Sending base64(user:token) as Basic always answers 401 here, even
+          # when the credentials are correct.
+          jwt=$(curl -fsS \
+            -X POST \
+            -H 'Content-Type: application/json' \
+            -d "{\"username\":\"${DOCKERHUB_USERNAME}\",\"password\":\"${DOCKERHUB_TOKEN}\"}" \
+            https://hub.docker.com/v2/users/login/ \
+            | jq -r .token)
 
           # Deleting a manifest (or the latest tag) keeps the old tag pointing at
           # a stale image, so remove every tag that will be overwritten.
           for tag in "$VERSION" latest; do
             code=$(curl -sS -o /dev/null -w '%{http_code}' \
               -X DELETE \
-              -H "Authorization: Basic ${auth}" \
+              -H "Authorization: JWT ${jwt}" \
               "https://hub.docker.com/v2/repositories/${DOCKERHUB_USERNAME}/${IMAGE_NAME}/tags/${tag}/")
 
             case "$code" in
-              204)
+              202|204)
                 echo "deleted ${IMAGE_NAME}:${tag}"
                 ;;
               404)
                 echo "tag ${IMAGE_NAME}:${tag} does not exist, nothing to delete"
+                ;;
+              401|403)
+                echo "::error::not authorised to delete ${IMAGE_NAME}:${tag} (HTTP ${code}). Check that DOCKERHUB_USERNAME is the account that owns the repository and that DOCKERHUB_TOKEN is one of its access tokens."
+                exit 1
                 ;;
               *)
                 echo "::error::failed to delete tag ${IMAGE_NAME}:${tag} (HTTP ${code})"
