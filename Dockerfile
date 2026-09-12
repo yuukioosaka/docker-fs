@@ -14,7 +14,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -yq --no-install-re
 # Only libraries whose module is enabled in ./modules.conf.in belong here.
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -yq --no-install-recommends install \
         libssl-dev zlib1g-dev libdb-dev unixodbc-dev libncurses-dev \
-        libexpat1-dev libgdbm-dev bison libtpl-dev libtiff-dev \
+        libexpat1-dev libgdbm-dev bison libtpl-dev \
         uuid-dev libpcre2-dev libedit-dev libsqlite3-dev libcurl4-openssl-dev \
         libogg-dev libspeex-dev libspeexdsp-dev libldns-dev \
         python3-dev python3-distutils python3-setuptools \
@@ -42,11 +42,6 @@ RUN git clone --depth 1 https://github.com/freeswitch/sofia-sip.git sofia-sip \
        --disable-stun --prefix=/usr \
     && make -j"$(nproc)" && make install
 
-# spandsp
-RUN git clone --depth 1 https://github.com/freeswitch/spandsp.git spandsp \
-    && cd spandsp && ./bootstrap.sh \
-    && ./configure CFLAGS="-g -ggdb" --with-pic --prefix=/usr \
-    && make -j"$(nproc)" && make install
 
 # signalwire-c
 RUN git clone --depth 1 https://github.com/signalwire/signalwire-c.git signalwire-c \
@@ -97,7 +92,7 @@ LABEL org.opencontainers.image.title="FreeSWITCH" \
 # against libpython3.11.so.1.0 at load time.
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -yq --no-install-recommends install \
         libssl3 zlib1g libdb5.3 unixodbc libncurses6 libexpat1 libgdbm6 \
-        libtiff6 uuid-runtime libpcre2-8-0 libedit2 libsqlite3-0 libcurl4 \
+        uuid-runtime libpcre2-8-0 libedit2 libsqlite3-0 libcurl4 \
         libogg0 libspeex1 libspeexdsp1 libldns3 python3 libpython3.11 \
         liblua5.4-0 libopus0 libpq5 libsndfile1 libflac12 \
         libvorbis0a libshout3 libmpg123-0 libmp3lame0 \
@@ -112,7 +107,6 @@ COPY --from=build /usr/local/freeswitch /usr/local/freeswitch
 COPY --from=build /usr/lib/libks2.so* /usr/lib/
 COPY --from=build /usr/lib/libsofia-sip-ua.so* /usr/lib/
 COPY --from=build /usr/lib/libsignalwire_client2.so* /usr/lib/
-COPY --from=build /usr/lib/x86_64-linux-gnu/libspandsp.so* /usr/lib/x86_64-linux-gnu/
 RUN ldconfig
 
 ENV PATH="/usr/local/freeswitch/bin:${PATH}"
