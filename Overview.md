@@ -17,7 +17,7 @@ The table below lists what is **loaded by default**.
 
 | Category | Modules |
 |---|---|
-| Applications | av, bert, blacklist, callcenter, cidlookup, commands, conference, curl, db, directory, distributor, dptools, easyroute, esl, expr, fifo, hash, hiredis, httapi, http_cache, prefix, sms, spandsp, translate, valet_parking, voicemail, voicemail_ivr |
+| Applications | signalwire, av, bert, blacklist, callcenter, cidlookup, commands, conference, curl, db, directory, distributor, dptools, easyroute, esl, expr, fifo, hash, hiredis, httapi, http_cache, prefix, sms, spandsp, translate, valet_parking, voicemail, voicemail_ivr |
 | ASR/TTS | tts_commandline |
 | Codecs | opus |
 | Databases | mariadb, pgsql |
@@ -39,7 +39,6 @@ The remaining 26 modules are built and present in `lib/freeswitch/mod/`, but lef
 | Modules | Why they are not loaded |
 |---|---|
 | `mod_lcr`, `mod_fail2ban`, `mod_json_cdr`, `mod_odbc_cdr`, `mod_xml_curl`, `mod_xml_ldap` | Fail their load routine unless you supply a config file upstream does not ship, so they would log a `[CRIT]` on every boot |
-| `mod_signalwire` | Remote Address Error. |
 | `mod_amqp` | Retries its broker connection forever, flooding the log |
 | `mod_amr`, `mod_amrwb` | Load and transcode fine, but AMR/AMR-WB carry patent obligations in most jurisdictions |
 | `mod_spy` | Installs surveillance commands (`spy`, `eavesdrop`) |
