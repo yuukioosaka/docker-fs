@@ -61,6 +61,15 @@ mkdir -p "$(dirname "$OUT")"
 #      mod_video_filter  video filtering; audio-only deployments
 #      mod_xml_scgi      SCGI XML backend; fails to connect unless a server runs
 #
+# 4. It writes logs somewhere this image does not provide:
+#
+#      mod_logfile       writes var/log/freeswitch/freeswitch.log, which nothing
+#                        in the image rotates (no logrotate, no cron). Whatever
+#                        supervises the container has to bound that file, so the
+#                        console logger is left as the single place logs go.
+#      mod_syslog        logs to syslog; the image runs no syslog daemon, so it
+#                        was publishing into a socket nobody reads
+#
 # Every module here is still compiled into the image, so enabling one needs no
 # rebuild: add a <load module="..."/> line to your own modules.conf.xml (and,
 # for the group-1 modules, supply the configuration they read).
@@ -88,6 +97,8 @@ NOT_AUTOLOAD_MODULES=(
   mod_avmd
   mod_video_filter
   mod_xml_scgi
+  mod_logfile
+  mod_syslog
 )
 
 is_not_autoloaded() {
