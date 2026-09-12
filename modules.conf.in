@@ -34,7 +34,7 @@ applications/mod_redis
 applications/mod_signalwire
 applications/mod_sms
 #applications/mod_snapshot
-#applications/mod_spandsp
+applications/mod_spandsp
 #applications/mod_spy
 #applications/mod_test
 applications/mod_translate

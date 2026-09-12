@@ -4,7 +4,7 @@ A containerized build of [FreeSWITCH](https://github.com/signalwire/freeswitch),
 
 ## What's Included
 
-- FreeSWITCH core built from source; the dependencies libks, sofia-sip, and signalwire-c are also compiled from source
+- FreeSWITCH core built from source; the dependencies libks, sofia-sip, spandsp, and signalwire-c are also compiled from source
 - English sound files and Music-on-Hold (`sounds-install`, `moh-install`)
 - Multi-stage build — the final image ships only runtime libraries, not the build toolchain
 - Module set defined by a custom [`modules.conf.in`](https://github.com/yuukioosaka/docker-fs/blob/main/modules.conf.in), copied over the upstream file during the build; the startup module list is generated from it by `tools/gen-modules-conf.sh`
@@ -12,13 +12,13 @@ A containerized build of [FreeSWITCH](https://github.com/signalwire/freeswitch),
 
 ## Enabled Modules
 
-79 modules. `modules.conf.in` is the source of truth; the table below mirrors it.
+80 modules. `modules.conf.in` is the source of truth; the table below mirrors it.
 
 The image is ~514MB, down from ~1.5GB before the slimming described in "Why modules are disabled". Two things keep it there: `--no-install-recommends` on every apt install, and an apt package list that names only the libraries an enabled module actually links against.
 
 | Category | Modules |
 |---|---|
-| Applications | avmd, bert, blacklist, callcenter, cidlookup, commands, conference, curl, db, directory, distributor, dptools, easyroute, enum, esl, expr, fifo, fsk, hash, hiredis, httapi, http_cache, lcr, nibblebill, prefix, redis, signalwire, sms, translate, valet_parking, video_filter, vmd, voicemail, voicemail_ivr |
+| Applications | avmd, bert, blacklist, callcenter, cidlookup, commands, conference, curl, db, directory, distributor, dptools, easyroute, enum, esl, expr, fifo, fsk, hash, hiredis, httapi, http_cache, lcr, nibblebill, prefix, redis, signalwire, sms, spandsp, translate, valet_parking, video_filter, vmd, voicemail, voicemail_ivr |
 | ASR/TTS | tts_commandline |
 | Codecs | b64, codec2, g723_1, g729, opus |
 | Databases | mariadb, pgsql |
@@ -58,7 +58,6 @@ The list is deliberately narrower than upstream. Three reasons drive the exclusi
 | `mod_av`, `mod_cv`, `mod_imagick`, `mod_vlc` | Video/image processing. Their libraries also pull in large GL/LLVM/GDAL/X11 chains, and ffmpeg alone carries ~40 CVEs on bookworm that Debian does not plan to fix |
 | `mod_pocketsphinx` | Speech recognition; the acoustic model alone is 15MB |
 | `mod_amr`, `mod_amrwb` | Narrow mobile-codec use case |
-| `mod_spandsp` | FAX/T.38 and DTMF tone generation. Dropping it is what lets `libtiff` and `libjpeg` leave the runtime image entirely: `libspandsp.so` is their only direct consumer. Re-enabling it requires restoring the `spandsp` source build, `libtiff-dev`/`libtiff6`, the `libspandsp.so*` copy in the final stage, and the `x86_64-linux-gnu` hardcoded path. |
 | `mod_graylog2`, `mod_erlang_event` | Only useful if you run Graylog / Erlang |
 | `mod_memcache`, `mod_snmp` | Only useful if you use those services |
 
@@ -124,7 +123,7 @@ docker run --rm <image> tar -C /usr/local/freeswitch -cf - etc/freeswitch | tar 
 ## Constraints
 
 - **Module list is fixed at build time.** Modules not in `modules.conf.in` cannot be loaded at runtime; adding one requires rebuilding the image.
-- **Single architecture.** The final stage copies `libks2.so*`, `libsofia-sip-ua.so*`, and `libsignalwire_client2.so*` from hardcoded `x86_64`/`lib` paths, so this image (as-is) only supports `amd64`.
+- **Single architecture.** The final stage copies `libspandsp.so*` from a hardcoded `x86_64-linux-gnu` path, so this image (as-is) only supports `amd64`.
 - **Default credentials are live.** The shipped `event_socket.conf.xml` listens on `8021` with the well-known password `ClueCon` and the `loopback.auto` ACL commented out. Override these via your own config mount before exposing the container to any untrusted network.
 - **Empty `certs/` directory.** `make install` does not populate TLS certificates; run `gentls_cert` (from `bin/`) or supply your own if you enable TLS SIP profiles.
 - **No named volumes declared.** Config, logs, and DB directories are not `VOLUME`-declared, so data is ephemeral unless you explicitly bind/volume-mount those paths.
