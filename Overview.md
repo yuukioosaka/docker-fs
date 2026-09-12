@@ -65,6 +65,17 @@ The list is deliberately narrower than upstream. Three reasons drive the exclusi
 
 If your dialplan or config depends on any of these, fork and rebuild with a modified `modules.conf.in`.
 
+### Modules that cannot be disabled
+
+`mod_spandsp` **cannot** be removed by commenting it out of `modules.conf.in`, even if you do not need FAX/T.38:
+
+- `configure.ac` gates on `PKG_CHECK_MODULES([SPANDSP], [spandsp >= 3.1.1])` with a hard `AC_MSG_ERROR`, and there is no `--disable-spandsp` escape hatch.
+- `src/switch_spandsp.c` is compiled into `libfreeswitch` itself, and `Makefile.am` adds `$(SPANDSP_CFLAGS)` / `$(SPANDSP_LIBS)` to the core.
+
+So the `spandsp` source build and the `libspandsp.so*` copy in the final stage must stay regardless of the module list. This is also why `libtiff` and `libjpeg` are present: `libspandsp.so` links against both directly, even though no FreeSWITCH module or config references them. Dropping them would leave `mod_spandsp`, `mod_sndfile`, and every other module that loads `libfreeswitch` unresolvable.
+
+Note that a module being absent from `.so` output does not prove it is absent from the core: always check `src/switch_*.c` and the `*_LIBADD` lines in `Makefile.am` before treating a dependency as removable.
+
 ## Directory Layout (prefix: `/usr/local/freeswitch`)
 
 The prefix uses the FHS layout, so paths differ from the source tree's defaults:
