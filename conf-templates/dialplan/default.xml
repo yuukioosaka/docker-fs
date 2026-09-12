@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<!--
+  Kamailio forwards calls here over SIP (internal profile on 5080).
+
+  The extension answers and streams a continuous tone so the media path can be
+  verified: playing audio keeps an RTP stream flowing towards the caller while
+  the channel stays open, and it does not block the session thread.
+
+  Avoid endless_playback()/playback(silence_stream://-1) here: those block the
+  session thread in CS_EXECUTE, so FreeSWITCH stops processing in-dialog
+  requests and the caller's BYE is never answered.
+-->
+<include>
+  <context name="default">
+    <extension name="demo_answer">
+      <condition field="destination_number" expression="^(.*)$">
+        <action application="answer"/>
+        <action application="playback" data="tone_stream://%(2000,4000,440,480)"/>
+        <action application="park"/>
+      </condition>
+    </extension>
+  </context>
+</include>

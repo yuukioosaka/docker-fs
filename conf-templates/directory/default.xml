@@ -1,0 +1,4 @@
+<?xml version="1.0"?>
+<include>
+  <X-PRE-PROCESS cmd="include" data="default/*.xml"/>
+</include>

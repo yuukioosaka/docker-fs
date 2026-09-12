@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<!-- FreeSWITCH Event Socket. Kamailio / external tools connect here. -->
+<configuration name="event_socket.conf" description="Socket Client">
+  <settings>
+    <param name="nat-map" value="false"/>
+    <param name="listen-ip" value="0.0.0.0"/>
+    <param name="listen-port" value="8021"/>
+    <param name="password" value="${ESL_PASSWORD}"/>
+    <!--
+      `apply-inbound-acl` must be set explicitly. When it is omitted,
+      mod_event_socket falls back to the hardcoded `loopback.auto` list,
+      which only allows 127.0.0.0/8 and rejects every connection from
+      another container with "Access Denied, go away.".
+
+      mod_acl is not shipped in FreeSWITCH 1.11.3, so named lists from
+      acl.conf.xml cannot be used here. Instead pass a literal CIDR list:
+      switch_check_network_list_ip() accepts a comma-separated CIDR string
+      when the value is not a known list name.
+
+      A single value is used on purpose. The value may be repeated, but then
+      mod_event_socket requires EVERY listed ACL to match, and no peer can be
+      inside both 127.0.0.0/8 and 172.30.0.0/24.
+
+      DOCKER_NETWORK_CIDR is the compose network; adjust it if you change
+      the subnet. Add the address of any external ESL client here.
+    -->
+    <param name="apply-inbound-acl" value="${DOCKER_NETWORK_CIDR},127.0.0.0/8"/>
+  </settings>
+</configuration>

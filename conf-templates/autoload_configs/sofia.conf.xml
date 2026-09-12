@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<configuration name="sofia.conf" description="sofia Endpoint">
+  <global_settings>
+    <param name="log-level" value="info"/>
+    <param name="auto-restart" value="false"/>
+    <param name="debug-presence" value="0"/>
+  </global_settings>
+
+  <profiles>
+    <!-- Internal profile: Kamailio sends calls here on port 5080. -->
+    <profile name="internal">
+      <settings>
+        <param name="context" value="default"/>
+        <param name="sip-port" value="5080"/>
+        <!-- Bind the concrete address rather than the wildcard: FreeSWITCH derives
+             the source address for in-dialog replies from the socket it received
+             on, and a wildcard socket leaves that ambiguous. -->
+        <param name="sip-ip" value="$${local_ip_v4}"/>
+        <param name="rtp-ip" value="$${local_ip_v4}"/>
+        <param name="rtp-start-port" value="16384"/>
+        <param name="rtp-end-port" value="16484"/>
+        <param name="dialplan" value="XML"/>
+        <param name="user-agent-string" value="FreeSWITCH-Demo"/>
+        <!-- RTP pacing timer. This is the profile setting that selects the clock
+             used to send media; without it the log reports "Not using a timer"
+             and no RTP is emitted, so calls connect silently. -->
+        <param name="rtp-timer-name" value="timerfd"/>
+        <param name="auth-calls" value="false"/>
+        <param name="accept-blind-reg" value="false"/>
+        <param name="challenge-realm" value="auto_from"/>
+        <!--
+          Restrict who may send SIP to this profile. Named lists from
+          acl.conf.xml need mod_acl, which FreeSWITCH 1.11.3 does not ship, so
+          a literal CIDR list is used instead. Kamailio lives on the compose
+          network; 127.0.0.0/8 keeps fs_cli/originate working locally.
+        -->
+        <param name="apply-inbound-acl" value="${DOCKER_NETWORK_CIDR},127.0.0.0/8"/>
+      </settings>
+    </profile>
+  </profiles>
+</configuration>

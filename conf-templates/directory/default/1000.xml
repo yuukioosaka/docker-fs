@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<include>
+  <!-- 1000 is the demo extension that Kamailio routes to. -->
+  <user id="1000">
+    <params>
+      <param name="password" value="${FS_DEFAULT_PASSWORD}"/>
+    </params>
+    <variables>
+      <variable name="user_context" value="default"/>
+    </variables>
+  </user>
+</include>

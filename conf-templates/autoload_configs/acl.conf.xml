@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<!--
+  Network ACLs. The Docker network must be listed as an ESL/trusted
+  source so event_socket accepts connections from peer containers.
+-->
+<configuration name="acl.conf" description="Network Lists">
+  <network-lists>
+    <list name="esl_acl" default="deny">
+      <node type="allow" cidr="${DOCKER_NETWORK_CIDR}"/>
+      <node type="allow" cidr="127.0.0.1/32"/>
+    </list>
+  </network-lists>
+</configuration>

@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<!--
+  PostgreSQL connectivity.
+  Register a DSN named "postgres" that mod_pgsql and freeswitch's
+  core database section can reference.
+-->
+<configuration name="pgsql.conf" description="PostgreSQL Limits">
+  <settings>
+    <param name="odbc-dsn" value="pgsql://${PGUSER}:${PGPASSWORD}@${PGHOST}:${PGPORT}/${PGDATABASE}"/>
+  </settings>
+</configuration>
