@@ -85,7 +85,7 @@ formats/mod_png
 formats/mod_shout
 formats/mod_sndfile
 formats/mod_tone_stream
-formats/mod_vlc
+#formats/mod_vlc
 formats/mod_opusfile
 #languages/mod_basic
 #languages/mod_java
