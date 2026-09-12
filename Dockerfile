@@ -13,7 +13,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -yq install \
 # --- general / core / codec dependencies ---
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -yq install \
         libssl-dev zlib1g-dev libdb-dev unixodbc-dev libncurses-dev \
-        libexpat1-dev libgdbm-dev bison erlang-dev libtpl-dev libtiff-dev \
+        libexpat1-dev libgdbm-dev bison libtpl-dev libtiff-dev \
         uuid-dev libpcre2-dev libedit-dev libsqlite3-dev libcurl4-openssl-dev \
         libogg-dev libspeex-dev libspeexdsp-dev libldns-dev \
         python3-dev python3-distutils python3-setuptools \
