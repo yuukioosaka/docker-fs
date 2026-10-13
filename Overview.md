@@ -1,6 +1,6 @@
 # FreeSWITCH Docker Image
 
-A containerized build of [FreeSWITCH](https://github.com/signalwire/freeswitch), the open-source software telephony platform (SIP/VoIP server), based on `debian:trixie-slim`.
+A containerized build of [FreeSWITCH](https://github.com/signalwire/freeswitch), the open-source software telephony platform (SIP/VoIP server), based on `ubuntu:24.04`.
 
 ## What's Included
 

@@ -1,4 +1,4 @@
-FROM debian:trixie-slim AS build
+FROM ubuntu:24.04 AS build
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -yq --no-install-recommends install \
         git wget ca-certificates gnupg2 lsb-release \
@@ -19,7 +19,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -yq --no-install-re
         libogg-dev libspeex-dev libspeexdsp-dev libldns-dev \
         python3-dev python3-setuptools \
         liblua5.4-dev libopus-dev libpq-dev \
-        libsndfile1-dev libflac-dev libvorbis-dev default-libmysqlclient-dev \
+        libsndfile1-dev libflac-dev libvorbis-dev \
         libshout3-dev libmpg123-dev libmp3lame-dev \
         libnode-dev librabbitmq-dev \
         libhiredis-dev libmariadb-dev libldap2-dev \
@@ -72,7 +72,7 @@ WORKDIR /usr/src/freeswitch
 
 # Replace the upstream module list wholesale: our modules.conf.in is the source
 # of truth for which modules get built, and it only enables modules whose
-# dependencies exist in Debian trixie.
+# dependencies exist in Ubuntu 24.04.
 COPY modules.conf.in /usr/src/freeswitch/build/modules.conf.in
 
 # The shipped autoload list names every module upstream knows about, so the
@@ -97,28 +97,27 @@ RUN ./bootstrap.sh -j \
 RUN rm -rf /usr/src/freeswitch/.git /usr/src/libs/*/.git
 
 # ---------------------------------------------------------------------------
-FROM debian:trixie-slim
+FROM ubuntu:24.04
 
 LABEL org.opencontainers.image.title="FreeSWITCH" \
       org.opencontainers.image.source="https://github.com/signalwire/freeswitch"
 
-# Package names differ from bookworm: several libraries were renamed for the
-# 64-bit time_t transition (t64 suffix), and flac, libhiredis,
-# libcurl, and openldap all bumped their soname. libpython3.13 is not a
-# dependency of python3, but mod_python3.so links against libpython3.13.so.1.0
-# at load time.
+# Runtime library names follow Ubuntu 24.04, not Debian trixie: FFmpeg here is
+# 6.1 (avformat60/avcodec60/swscale7/avutil58/swresample4) and FLAC is 1.4
+# (libflac12t64). libpython3.12t64 is not a dependency of python3, but
+# mod_python3.so links against libpython3.12.so.1.0 at load time.
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -yq --no-install-recommends install \
         libssl3t64 zlib1g libdb5.3t64 unixodbc libncurses6 libexpat1 libgdbm6t64 \
         libtiff6 uuid-runtime libpcre2-8-0 libedit2 libsqlite3-0 libcurl4t64 \
-        libogg0 libspeex1 libspeexdsp1 libldns3t64 python3 libpython3.13 \
-        liblua5.4-0 libopus0 libpq5 libsndfile1 libflac14 \
+        libogg0 libspeex1 libspeexdsp1 libldns3t64 python3 libpython3.12t64 \
+        liblua5.4-0 libopus0 libpq5 libsndfile1 libflac12t64 \
         libvorbis0a libshout3 libmpg123-0t64 libmp3lame0 \
         libvorbisfile3 libtpl0 \
         libhiredis1.1.0 libmariadb3 libldap2 \
         libopusfile0 libopusenc0 \
         librabbitmq4 \
         libopencore-amrnb0 libopencore-amrwb0 libvo-amrwbenc0 \
-        libavformat61 libavcodec61 libswscale8 libavutil59 libswresample5 \
+        libavformat60 libavcodec60 libswscale7 libavutil58 libswresample4 \
         ca-certificates tini gettext-base postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
