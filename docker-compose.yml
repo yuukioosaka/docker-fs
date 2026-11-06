@@ -5,6 +5,7 @@
 # Usage
 # -----
 #   1. Extract the default config into ./etc (required before first run):
+# 　　　　　　　mkdir etc
 #        docker run --rm yukiosaka/freeswitch:latest \
 #          tar -C /usr/local/freeswitch -cf - etc/freeswitch \
 #          | tar -xf - --strip-components=1 -C ./etc
@@ -88,7 +89,8 @@ services:
       - "5060:5060/tcp"
       - "5080:5080/udp"
       - "5080:5080/tcp"
-      - "16384-18383:16384-18383/udp"
+      # RTP. Keep this range small
+      - "16384-16483:16384-16483/udp"
       # ESL — intentionally commented out and NOT hardened by this
       # compose (default password "ClueCon", open ACL unchanged). Only
       # uncomment after changing the password/ACL yourself in
