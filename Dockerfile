@@ -87,6 +87,16 @@ COPY conf-templates/autoload_configs/modules.conf.xml \
 COPY conf-templates/autoload_configs/pre_load_modules.conf.xml \
      /usr/src/freeswitch/conf/vanilla/autoload_configs/pre_load_modules.conf.xml
 
+# Upstream ships switch.conf.xml with rtp-start-port/rtp-end-port commented out,
+# which lets FreeSWITCH allocate anywhere in 16384-32768 -- mostly outside the
+# range docker-compose.yml publishes. Pin them to the published range so the
+# shipped config and the compose file agree.
+COPY tools/pin-rtp-range.sh /tmp/pin-rtp-range.sh
+RUN sh /tmp/pin-rtp-range.sh \
+        /usr/src/freeswitch/conf/vanilla/autoload_configs/switch.conf.xml \
+        16384 16583 \
+    && rm -f /tmp/pin-rtp-range.sh
+
 RUN ./bootstrap.sh -j \
     && ./configure --prefix=/usr/local/freeswitch --enable-core-odbc-support \
     && make -j"$(nproc)" \

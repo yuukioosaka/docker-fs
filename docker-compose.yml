@@ -12,6 +12,11 @@
 #
 #   2. docker compose up -d
 #
+#   ./secrets is not used by this compose: FreeSWITCH generates its own
+#   self-signed TLS material on first boot (tls/wss.pem and
+#   tls/dtls-srtp.pem under etc/freeswitch/) and reuses it from the
+#   ./etc volume on later restarts.
+#
 #   3. Change the default passwords — see Customization below.
 #
 # Customization
@@ -44,7 +49,7 @@
 #   5. RTP port range
 #      File: ./etc/freeswitch/autoload_configs/switch.conf.xml
 #      Fix:  uncomment and set rtp-start-port / rtp-end-port explicitly
-#            to match the "ports:" range below (16384-16483). Left
+#            to match the "ports:" range below (16384-16583). Left
 #            commented out, FreeSWITCH defaults to the full 16384-32768
 #            span, wider than what is actually published.
 #
@@ -85,7 +90,7 @@ services:
       - "5080:5080/udp"
       - "5080:5080/tcp"
       # RTP. Keep this range small
-      - "16384-16483:16384-16483/udp"
+      - "16384-16583:16384-16583/udp"
       # ESL — intentionally commented out and NOT hardened by this
       # compose (default password "ClueCon", open ACL unchanged). Only
       # uncomment after changing the password/ACL yourself in
