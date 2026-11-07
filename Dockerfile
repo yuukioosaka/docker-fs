@@ -89,13 +89,13 @@ COPY conf-templates/autoload_configs/pre_load_modules.conf.xml \
 
 # Upstream ships switch.conf.xml with rtp-start-port/rtp-end-port commented out,
 # which lets FreeSWITCH allocate anywhere in 16384-32768 -- mostly outside the
-# range docker-compose.yml publishes. Pin them to the published range so the
-# shipped config and the compose file agree.
-COPY tools/pin-rtp-range.sh /tmp/pin-rtp-range.sh
-RUN sh /tmp/pin-rtp-range.sh \
-        /usr/src/freeswitch/conf/vanilla/autoload_configs/switch.conf.xml \
-        16384 16583 \
-    && rm -f /tmp/pin-rtp-range.sh
+# range docker-compose.yml publishes. Uncomment them and pin the range.
+RUN sed -i \
+        -e 's|^    <!-- <param name="rtp-start-port" value="[0-9]*"/> -->$|    <param name="rtp-start-port" value="16384"/>|' \
+        -e 's|^    <!-- <param name="rtp-end-port" value="[0-9]*"/> -->$|    <param name="rtp-end-port" value="16583"/>|' \
+        conf/vanilla/autoload_configs/switch.conf.xml \
+    && grep -q 'name="rtp-start-port" value="16384"' conf/vanilla/autoload_configs/switch.conf.xml \
+    && grep -q 'name="rtp-end-port" value="16583"' conf/vanilla/autoload_configs/switch.conf.xml
 
 RUN ./bootstrap.sh -j \
     && ./configure --prefix=/usr/local/freeswitch --enable-core-odbc-support \
