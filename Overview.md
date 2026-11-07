@@ -127,20 +127,19 @@ docker-compose.yml
 # Usage
 # -----
 #   1. Extract the default config into ./etc (required before first run):
+# 　　　　　　　mkdir etc
 #        docker run --rm yukiosaka/freeswitch:latest \
 #          tar -C /usr/local/freeswitch -cf - etc/freeswitch \
 #          | tar -xf - --strip-components=1 -C ./etc
 #
-#   2. mkdir -p ./secrets && chmod 700 ./secrets
+#   2. docker compose up -d
 #
-#   3. docker compose up -d
-#      On first boot the container generates a self-signed TLS cert and
-#      writes it to ./secrets/tls, then starts FreeSWITCH normally. On
-#      subsequent restarts, if ./secrets/tls already exists, it is
-#      reused as-is instead of being regenerated.
+#   ./secrets is not used by this compose: FreeSWITCH generates its own
+#   self-signed TLS material on first boot (tls/wss.pem and
+#   tls/dtls-srtp.pem under etc/freeswitch/) and reuses it from the
+#   ./etc volume on later restarts.
 #
-#   4. Check what was generated:
-#        ls ./secrets/tls
+#   3. Change the default passwords — see Customization below.
 #
 # Customization
 # -------------
@@ -172,23 +171,25 @@ docker-compose.yml
 #   5. RTP port range
 #      File: ./etc/freeswitch/autoload_configs/switch.conf.xml
 #      Fix:  uncomment and set rtp-start-port / rtp-end-port explicitly
-#            to match the "ports:" range below (16384-18383). Left
+#            to match the "ports:" range below (16384-16483). Left
 #            commented out, FreeSWITCH defaults to the full 16384-32768
 #            span, wider than what is actually published.
 #
 #   6. SIP TLS profile
 #      File: ./etc/freeswitch/sip_profiles/internal.xml (and/or external.xml)
-#      Fix:  add a TLS-enabled profile pointing at the certs generated
-#            under ./secrets/tls, then restart the profile
-#            (`sofia profile <name> restart`) — SIP is plaintext until
-#            this is done.
+#      Fix:  set internal_ssl_enable (and/or external_ssl_enable) to true
+#            in vars.xml to add TLS-enabled profiles. FreeSWITCH already
+#            creates wss.pem under ./etc/freeswitch/tls/ on first boot and
+#            uses it for SIP TLS, WSS (:7443) and DTLS-SRTP, then restart
+#            the profile (`sofia profile <name> restart`) — SIP is
+#            plaintext until this is done.
 #
 #   Non-security customization:
 #   - RTP capacity: match ports: above to your expected concurrent call
 #     count (~2 RTP ports per call) when setting item 5.
-#   - Self-signed cert: on first start this compose generates one via
-#     gentls_cert into ./secrets/tls and reuses it on later restarts —
-#     see item 6 to actually wire it into a SIP profile.
+#   - Self-signed cert: FreeSWITCH generates wss.pem/dtls-srtp.pem in
+#     ./etc/freeswitch/tls/ itself on first boot and keeps them across
+#     restarts — see item 6 to actually use them for SIP TLS.
 #   - Anything else not covered above (dialplans, additional modules,
 #     etc.) — edit XML under ./etc/freeswitch/ directly and run
 #     `fs_cli reloadxml` (or restart the container).
@@ -210,7 +211,8 @@ services:
       - "5060:5060/tcp"
       - "5080:5080/udp"
       - "5080:5080/tcp"
-      - "16384-18383:16384-18383/udp"
+      # RTP. Keep this range small
+      - "16384-16483:16384-16483/udp"
       # ESL — intentionally commented out and NOT hardened by this
       # compose (default password "ClueCon", open ACL unchanged). Only
       # uncomment after changing the password/ACL yourself in
@@ -219,26 +221,16 @@ services:
       # instead of publishing to the host.
       # - "8021:8021/tcp"
     volumes:
+      # FreeSWITCH writes its self-signed TLS material to
+      # etc/freeswitch/tls/ on first boot; sharing ./etc keeps it across
+      # container recreations.
       - ./etc:/usr/local/freeswitch/etc
-      - ./secrets:/secrets
       - fs-db:/usr/local/freeswitch/var/lib/freeswitch/db
       - fs-recordings:/usr/local/freeswitch/var/lib/freeswitch/recordings
       - fs-storage:/usr/local/freeswitch/var/lib/freeswitch/storage
       - fs-log:/usr/local/freeswitch/var/log/freeswitch
     networks:
       - internal
-    entrypoint: ["/bin/sh", "-c"]
-    command:
-      - |
-        ETC=/usr/local/freeswitch/etc/freeswitch
-        if [ ! -d /secrets/tls ]; then
-          /usr/local/freeswitch/bin/gentls_cert sip
-          cp -r "$$ETC/tls" /secrets/tls
-        else
-          rm -rf "$$ETC/tls"
-          cp -r /secrets/tls "$$ETC/tls"
-        fi
-        exec /usr/bin/tini -- /usr/local/bin/docker-entrypoint.sh freeswitch -nonat -nf -c
 
 networks:
   internal:
@@ -265,7 +257,7 @@ See the docker-compose.yml above for step-by-step hardening (ESL password/ACL, S
 - **Module list is fixed at build time.** Modules not in `modules.conf.in` cannot be loaded at runtime.
 - **Single architecture.** The final stage copies `libks2.so*`, `libsofia-sip-ua.so*`, `libsignalwire_client2.so*`, and `libspandsp.so*` from hardcoded `x86_64`/`lib` paths, so this image (as-is) only supports `amd64`.
 - **Default credentials are live.** The shipped `event_socket.conf.xml` listens on `::` port `8021` with the well-known password `ClueCon`, and the `loopback.auto` ACL is commented out. That means anyone who can reach the port can control the switch. Override these via your own config mount before exposing the container to any untrusted network.
-- **No TLS certificates.** `make install` does not create a `certs/` or `tls/` directory. Run `gentls_cert` (in `bin/`) or supply your own if you enable TLS SIP profiles — the docker-compose.yml above automates this via `gentls_cert`, writing certs to `./secrets/tls`, but still requires you to wire them into a SIP profile manually (see Customization item 6 in the compose file).
+- **TLS certificates are self-generated at runtime.** `make install` does not create a `tls/` directory; FreeSWITCH writes a self-signed `tls/wss.pem` and `tls/dtls-srtp.pem` under `etc/freeswitch/` on first boot and reuses them afterwards (they are bound into clients, so they survive container recreations via the `./etc` mount). SIP TLS is still off until you set `internal_ssl_enable` / `external_ssl_enable` (see Customization item 6 in the compose file).
 - **No named volumes declared.** Config, logs, and DB directories are not `VOLUME`-declared, so data is ephemeral unless you explicitly bind/volume-mount those paths.
 - **tini as PID 1** handles signal forwarding (SIGTERM/SIGHUP); graceful shutdown and reload behavior depend on FreeSWITCH's own signal handling.
 
