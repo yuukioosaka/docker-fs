@@ -134,11 +134,6 @@ docker-compose.yml
 #
 #   2. docker compose up -d
 #
-#   ./secrets is not used by this compose: FreeSWITCH generates its own
-#   self-signed TLS material on first boot (tls/wss.pem and
-#   tls/dtls-srtp.pem under etc/freeswitch/) and reuses it from the
-#   ./etc volume on later restarts.
-#
 #   3. Change the default passwords — see Customization below.
 #
 # Customization
