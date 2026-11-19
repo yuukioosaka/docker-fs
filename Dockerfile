@@ -27,6 +27,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -yq --no-install-re
         libopencore-amrnb-dev libopencore-amrwb-dev libvo-amrwbenc-dev \
         libavformat-dev libavcodec-dev libswscale-dev \
         libavutil-dev libswresample-dev \
+        libminiupnpc-dev libnatpmp-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /usr/src/libs
@@ -128,6 +129,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -yq --no-install-re
         librabbitmq4 \
         libopencore-amrnb0 libopencore-amrwb0 libvo-amrwbenc0 \
         libavformat60 libavcodec60 libswscale7 libavutil58 libswresample4 \
+        libminiupnpc17 libnatpmp1 \
         ca-certificates tini gettext-base postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
